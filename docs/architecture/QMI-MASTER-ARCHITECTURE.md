@@ -121,8 +121,18 @@ backtest that justified the strategy. New tables:
 `portfolio_snapshots` (no separate `positions` table — see that migration's
 comment). `services/paper-execution/tests/test_integration.py` runs the complete
 chain bars → regime → candidate → risk decision → paper order → fill → position
-end to end. All other directories still exist only as placeholders (`README.md`
-stubs) to fix the intended structure without pretending the functionality exists.
+end to end. Phase 8 added `services/ai-council`: rule-based (not LLM-backed —
+see that service's README for why) analytical agents over the same evidence the
+pipeline already produced — `QuantAgent` (edge-vs-cost consistency),
+`RiskOfficer` (a direct translation of `risk_engine`'s decision, never
+re-derived), `DevilsAdvocate` (structurally cannot output SUPPORT — only OPPOSE
+or NEUTRAL), and `Auditor` (contradiction checks, e.g. a candidate's frozen
+`regime` field against a freshly-reclassified regime). `council.synthesize()` is
+the Chief Intelligence Agent: a confidence-weighted vote that a single `VETO`
+(only `RiskOfficer` can produce one) overrides unconditionally. No new
+persistence — see that service's README for why. All other directories still
+exist only as placeholders (`README.md` stubs) to fix the intended structure
+without pretending the functionality exists.
 
 ## 4. Stack decisions
 
@@ -188,20 +198,27 @@ Exchange WS/REST
   → analytics / research notebook / audit trail
 ```
 
-What's real as of Phase 7, and what isn't:
+What's real as of Phase 8, and what isn't:
 
 - **Real, end to end, but only against synthetic/in-process bars**: market-data →
   persistence → feature-engine → regime-engine → strategy-engine → risk-engine →
-  paper-execution. `services/paper-execution/tests/test_integration.py` runs this
-  exact chain — bars, regime, candidate, risk decision, paper order, simulated
-  fill, position — and checks a `REJECT` decision never reaches a fill.
+  paper-execution, with ai-council analyzing alongside (not inside) that chain.
+  `services/paper-execution/tests/test_integration.py` and
+  `services/ai-council/tests/test_integration.py` run this — bars, regime,
+  candidate, risk decision, paper order, simulated fill, position, council
+  synthesis — and check a `REJECT` decision never reaches a fill and always
+  produces a council `VETO`.
 - **Real but not chained to the above**: forecast-engine doesn't exist;
   statistical-engine/microstructure-engine don't exist as separate services (their
-  formulas live in quant-core, see those services' READMEs).
-- **Not real**: nothing runs the strategy→risk→paper-execution chain on a schedule
-  against live-ingested market data — it's a callable pipeline, not a daemon.
-  portfolio-engine exists only as formulas (`quant_core.portfolio`), not a service
-  that sizes an approved candidate before it reaches paper-execution.
+  formulas live in quant-core, see those services' READMEs); ai-council implements
+  5 of the brief's 12 agents (Quant, Risk Officer, Devil's Advocate, Auditor, Chief
+  Intelligence). Trader, Market Structure, Macro, On-Chain, Derivatives, Portfolio,
+  and Security/Fraud agents are deferred — see that service's README for why each
+  one specifically.
+- **Not real**: nothing runs the strategy→risk→paper-execution→council chain on a
+  schedule against live-ingested market data — it's a callable pipeline, not a
+  daemon. portfolio-engine exists only as formulas (`quant_core.portfolio`), not a
+  service that sizes an approved candidate before it reaches paper-execution.
 
 ## 7. Observability
 

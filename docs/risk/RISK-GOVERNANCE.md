@@ -169,10 +169,18 @@ end to end. Phase 7 added `services/paper-execution`, which finally consumes a r
 decision: `orders.create_order_from_decision` structurally cannot build an order
 from a `REJECT`, and `services/paper-execution/tests/test_integration.py` runs the
 complete chain — bars, regime, candidate, risk decision, paper order, simulated
-fill, position — end to end. What's still missing is a *live* pipeline: nothing runs
-this on a schedule against ingested market data, and nothing yet writes to the
-`risk_decisions` table (only `paper_orders`/`fills`/`portfolio_snapshots` have
-persistence wired up so far). This document exists so that:
+fill, position — end to end. Phase 8 added `services/ai-council`: rule-based
+analytical agents (Section 16's "Risk Officer retains veto" is now enforced in
+code — `RiskOfficer`'s opinion is `risk_engine`'s decision itself, translated, and
+`council.synthesize()` treats a single `VETO` as absolute, the same way
+`risk_engine`'s own hard-reject tier short-circuits everything after it). Council
+opinions are advisory analysis alongside the pipeline, exactly as this section
+requires — they carry no authority to approve, reduce, or execute anything
+`risk_engine` didn't already decide. What's still missing is a *live* pipeline:
+nothing runs this on a schedule against ingested market data, and nothing yet
+writes to the `risk_decisions` table (only `paper_orders`/`fills`/
+`portfolio_snapshots` have persistence wired up so far). This document exists so
+that:
 
 1. Every later phase is built against a stable, agreed policy instead of inventing risk
    rules ad hoc per feature.
