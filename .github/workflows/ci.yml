@@ -35,7 +35,7 @@ jobs:
         run: pnpm build
 
   python:
-    name: Python quant-core + feature-engine + risk-engine (lint, test)
+    name: Python quant-core + feature-engine + risk-engine + backtester (lint, test)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,15 +44,22 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install quant-core, feature-engine, and risk-engine
+      - name: Install quant-core, feature-engine, risk-engine, and backtester
         run: |
           pip install -e "packages/quant-core[dev]" \
                       -e "services/feature-engine[dev]" \
-                      -e "services/risk-engine[dev]"
+                      -e "services/risk-engine[dev]" \
+                      -e "services/backtester[dev]"
 
       - name: Lint (ruff)
-        run: ruff check packages/quant-core services/feature-engine services/risk-engine
+        run: |
+          ruff check packages/quant-core services/feature-engine \
+                     services/risk-engine services/backtester
 
       - name: Test (pytest)
+        # --import-mode=importlib: two packages both have a tests/test_engine.py;
+        # the default import mode collides on that basename when run together.
         run: |
-          pytest packages/quant-core/tests services/feature-engine/tests services/risk-engine/tests
+          pytest --import-mode=importlib \
+                 packages/quant-core/tests services/feature-engine/tests \
+                 services/risk-engine/tests services/backtester/tests

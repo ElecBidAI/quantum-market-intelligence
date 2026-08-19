@@ -88,9 +88,14 @@ but not yet wired into a live pipeline — there is no strategy-engine to call i
 paper-execution to consume its output yet (Phases 6-7). `services/portfolio-engine`
 remains unimplemented as a separate service for the same reason feature-engine
 started as a batch job: no live consumer (forecast-engine) supplies real
-expected-return/covariance inputs yet. All other directories still exist only as
-placeholders (`README.md` stubs) to fix the intended structure without pretending
-the functionality exists.
+expected-return/covariance inputs yet. Phase 4 added `services/backtester`: an
+event-driven, single-asset backtest engine with a structural no-look-ahead
+guarantee, a transaction-cost model, the standard performance-metrics suite
+(reusing `quant_core.risk`), walk-forward window splitting, and the reproducible
+`ExperimentRecord` from brief Section 17
+(`data/migrations/0004_backtests.sql`'s `backtests`/`research_runs` tables). All
+other directories still exist only as placeholders (`README.md` stubs) to fix the
+intended structure without pretending the functionality exists.
 
 ## 4. Stack decisions
 

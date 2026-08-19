@@ -5,11 +5,12 @@ Crypto-first, multi-asset-ready quantitative market intelligence platform.
 > **Core rule:** no AI agent, signal, strategy, or model may bypass the Risk Engine.
 > See [`docs/risk/RISK-GOVERNANCE.md`](docs/risk/RISK-GOVERNANCE.md).
 
-This repository is through **Phase 3 (Risk + Portfolio)**. There is still no
+This repository is through **Phase 4 (Backtesting)**. There is still no
 strategy-engine and no execution capability — `services/risk-engine`'s
-`evaluate()` (the APPROVE/REDUCE/REJECT gate) is implemented and fully tested,
-but nothing calls it yet because nothing produces real strategy candidates yet.
-See [`docs/architecture/QMI-MASTER-ARCHITECTURE.md`](docs/architecture/QMI-MASTER-ARCHITECTURE.md)
+`evaluate()` (the APPROVE/REDUCE/REJECT gate) and `services/backtester`'s
+event-driven engine are both implemented and fully tested, but nothing calls
+them yet in a live pipeline because nothing produces real strategy candidates
+yet. See [`docs/architecture/QMI-MASTER-ARCHITECTURE.md`](docs/architecture/QMI-MASTER-ARCHITECTURE.md)
 for the full plan and what exists today. Live market data is real (Binance spot,
 BTC/ETH) but read-only: nothing in this repository can place an order.
 
@@ -31,7 +32,7 @@ yet contains a `README.md` explaining what it will hold and which phase implemen
 cp .env.example .env        # fill in local values; never commit .env
 
 docker compose up -d        # Postgres/TimescaleDB + Redis
-# apply data/migrations/*.sql in order (0001, 0002, 0003) against $DATABASE_URL
+# apply data/migrations/*.sql in order (0001-0004) against $DATABASE_URL
 # (docker-compose.yml also auto-applies them for a fresh volume)
 
 pnpm install                 # installs apps/*, packages/contracts, packages/config,
@@ -39,7 +40,8 @@ pnpm install                 # installs apps/*, packages/contracts, packages/con
 
 pip install -e "packages/quant-core[dev]" \
             -e "services/feature-engine[dev]" \
-            -e "services/risk-engine[dev]"
+            -e "services/risk-engine[dev]" \
+            -e "services/backtester[dev]"
 
 pnpm lint
 pnpm typecheck
@@ -47,10 +49,12 @@ pnpm test
 pnpm build
 ```
 
-Run the Python tests separately:
+Run the Python tests separately (`--import-mode=importlib` avoids a module-name
+collision between two packages that both have a `tests/test_engine.py`):
 
 ```bash
-pytest packages/quant-core/tests services/feature-engine/tests services/risk-engine/tests
+pytest --import-mode=importlib packages/quant-core/tests services/feature-engine/tests \
+       services/risk-engine/tests services/backtester/tests
 ```
 
 ## Running the live stack locally
@@ -81,6 +85,7 @@ curl -N http://localhost:4000/stream/market?symbols=BTC-USDT   # live SSE feed
 - [`services/market-data/README.md`](services/market-data/README.md) — what the Binance adapter does and doesn't ingest yet.
 - [`services/feature-engine/README.md`](services/feature-engine/README.md) — how OHLCV becomes a feature vector, and what's deferred.
 - [`services/risk-engine/README.md`](services/risk-engine/README.md) — the APPROVE/REDUCE/REJECT gate: what it checks, what's deferred, why it isn't wired into a pipeline yet.
+- [`services/backtester/README.md`](services/backtester/README.md) — the event-driven backtest engine, its no-look-ahead guarantee, and what's deferred.
 
 ## Non-goals (see the implementation brief, Section 24)
 
