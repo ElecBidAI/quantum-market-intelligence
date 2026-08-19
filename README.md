@@ -5,7 +5,7 @@ Crypto-first, multi-asset-ready quantitative market intelligence platform.
 > **Core rule:** no AI agent, signal, strategy, or model may bypass the Risk Engine.
 > See [`docs/risk/RISK-GOVERNANCE.md`](docs/risk/RISK-GOVERNANCE.md).
 
-This repository is through **Phase 1 (Live Data)**. There are no strategies, no risk
+This repository is through **Phase 2 (Quant Core)**. There are no strategies, no risk
 engine, and no execution capability yet — see
 [`docs/architecture/QMI-MASTER-ARCHITECTURE.md`](docs/architecture/QMI-MASTER-ARCHITECTURE.md)
 for the full plan and what exists today. Live market data is real (Binance spot,
@@ -29,13 +29,13 @@ yet contains a `README.md` explaining what it will hold and which phase implemen
 cp .env.example .env        # fill in local values; never commit .env
 
 docker compose up -d        # Postgres/TimescaleDB + Redis
-# apply data/migrations/0001_init.sql, then 0002_market_data.sql, against
-# $DATABASE_URL (docker-compose.yml also auto-applies them for a fresh volume)
+# apply data/migrations/*.sql in order (0001, 0002, 0003) against $DATABASE_URL
+# (docker-compose.yml also auto-applies them for a fresh volume)
 
 pnpm install                 # installs apps/*, packages/contracts, packages/config,
                               # packages/observability, services/market-data
 
-pip install -e "packages/quant-core[dev]"
+pip install -e "packages/quant-core[dev]" -e "services/feature-engine[dev]"
 
 pnpm lint
 pnpm typecheck
@@ -43,10 +43,10 @@ pnpm test
 pnpm build
 ```
 
-Run the quant-core Python tests separately:
+Run the Python tests separately:
 
 ```bash
-pytest packages/quant-core/tests
+pytest packages/quant-core/tests services/feature-engine/tests
 ```
 
 ## Running the live stack locally
@@ -55,6 +55,9 @@ pytest packages/quant-core/tests
 pnpm --filter @qmi/market-data dev   # connects to Binance, ingests BTC/ETH
 pnpm --filter @qmi/api dev           # exposes /health, /market/latest, /stream/market
 pnpm --filter @qmi/web dev           # dashboard at http://localhost:3000
+
+# once a few minutes of 1m bars have accumulated:
+DATABASE_URL=$DATABASE_URL python -m feature_engine.main
 ```
 
 ```bash
@@ -72,6 +75,7 @@ curl -N http://localhost:4000/stream/market?symbols=BTC-USDT   # live SSE feed
 - [`docs/architecture/DATA-CONTRACTS.md`](docs/architecture/DATA-CONTRACTS.md) — canonical data shapes (source of truth: `packages/contracts`).
 - [`docs/risk/RISK-GOVERNANCE.md`](docs/risk/RISK-GOVERNANCE.md) — binding risk policy, enforced starting Phase 3.
 - [`services/market-data/README.md`](services/market-data/README.md) — what the Binance adapter does and doesn't ingest yet.
+- [`services/feature-engine/README.md`](services/feature-engine/README.md) — how OHLCV becomes a feature vector, and what's deferred.
 
 ## Non-goals (see the implementation brief, Section 24)
 

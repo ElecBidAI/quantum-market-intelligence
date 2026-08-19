@@ -193,10 +193,15 @@ Phase 0 (`data/migrations/0001_init.sql`) created `signals`, `risk_decisions`, a
 before there was any ingestion pipeline (Section 6, Section 7, and a minimal audit
 trail). Phase 1 (`data/migrations/0002_market_data.sql`) added `market_ticks`, `ohlcv`,
 and `orderbook_snapshots`, written by `services/market-data`'s Binance adapter
-(Section 3.1, 3.2, 3.4). `orderbook_deltas` and the remaining tables in this list are
-still deferred to whichever phase first reads or writes them — Phase 1 ingests
-top-of-book snapshots only (see `services/market-data/README.md`), not incremental
-diffs, so `orderbook_deltas` has no producer yet.
+(Section 3.1, 3.2, 3.4). Phase 2 (`data/migrations/0003_features.sql`) added
+`features`, written by `services/feature-engine`: one JSONB blob per
+(symbol, interval, feature_set, timestamp), not a `packages/contracts` zod schema —
+it's a same-process, versioned-by-`feature_set` output rather than data crossing a
+service/language boundary, so it doesn't need the provenance envelope Section 2
+requires for externally-sourced records. `orderbook_deltas` and the remaining tables
+in this list are still deferred to whichever phase first reads or writes them — Phase
+1 ingests top-of-book snapshots only (see `services/market-data/README.md`), not
+incremental diffs, so `orderbook_deltas` has no producer yet.
 
 ## 10. Source of truth
 

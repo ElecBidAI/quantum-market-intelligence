@@ -35,7 +35,7 @@ jobs:
         run: pnpm build
 
   python:
-    name: Python quant-core (lint, test)
+    name: Python quant-core + feature-engine (lint, test)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,11 +44,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install quant-core
-        run: pip install -e "packages/quant-core[dev]"
+      - name: Install quant-core and feature-engine
+        run: pip install -e "packages/quant-core[dev]" -e "services/feature-engine[dev]"
 
       - name: Lint (ruff)
-        run: ruff check packages/quant-core
+        run: ruff check packages/quant-core services/feature-engine
 
       - name: Test (pytest)
-        run: pytest packages/quant-core/tests
+        run: pytest packages/quant-core/tests services/feature-engine/tests

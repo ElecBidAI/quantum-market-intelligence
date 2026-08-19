@@ -75,7 +75,12 @@ Phase 0 implemented `packages/contracts`, `packages/config`, `packages/observabi
 placeholder, and `data/migrations/0001_init.sql`. Phase 1 added `services/market-data`
 (one exchange adapter, Binance spot, BTC/ETH), `data/migrations/0002_market_data.sql`,
 a `/market/latest` + `/stream/market` live-data path in `apps/api`, and a live price
-panel in `apps/web`. All other directories still exist only as placeholders
+panel in `apps/web`. Phase 2 expanded `packages/quant-core` (statistics, correlation,
+volatility estimators, technical indicators — brief Section 4) and added
+`services/feature-engine`, a batch job that turns ingested OHLCV into a versioned
+feature vector (`data/migrations/0003_features.sql`); `services/statistical-engine`
+and `services/microstructure-engine` remain unimplemented as separate services (see
+their READMEs for why). All other directories still exist only as placeholders
 (`README.md` stubs) to fix the intended structure without pretending the
 functionality exists.
 
@@ -90,9 +95,16 @@ functionality exists.
   `apps/api` outweighs following the general "quant services are Python" rule for
   this one adapter-shaped service. Compute-heavy `*-engine` services remain Python
   per the rule below.
-- **Quantitative services**: Python 3.12. Phase 0 ships only `packages/quant-core`
-  (pure functions + pytest). Services under `services/*` are scaffolding for later
-  phases and are not implemented yet.
+- **Quantitative services**: Python 3.12. `packages/quant-core` is pure functions +
+  pytest, no I/O, no framework — Phase 2 grew it to cover returns, descriptive
+  statistics/correlation, volatility estimators, and technical indicators.
+  `services/feature-engine` (Phase 2) is the first consumer: a one-shot batch job
+  (`python -m feature_engine.main`), not a daemon, until a real-time consumer needs
+  it to be one. quant-core has no formal dependency mechanism linking it into
+  feature-engine's `pyproject.toml` — Python has nothing like pnpm's `workspace:*`
+  built in, so both packages are installed editable into the same environment (see
+  `services/feature-engine/README.md`). Remaining `services/*-engine` directories are
+  still scaffolding for later phases.
 - **Database**: PostgreSQL with the TimescaleDB extension for time-series tables.
   ClickHouse is a documented future option for very high-cardinality tick data but is
   not part of Phase 0.
@@ -121,13 +133,13 @@ functionality exists.
 - **All timestamps are UTC** at every layer (ingestion, storage, API, UI display may
   localize, but the source of truth is UTC).
 
-## 6. Data flow (target, post-Phase 1)
+## 6. Data flow (target; through Phase 2, market-data → persistence → feature-engine is real)
 
 ```
 Exchange WS/REST
   → market-data (normalize, dedupe, timestamp, quality-tag)
   → persistence (market_ticks, ohlcv, orderbook_snapshots/deltas)
-  → feature-engine / statistical-engine / microstructure-engine
+  → feature-engine (real, batch) / statistical-engine / microstructure-engine (not implemented)
   → forecast-engine, regime-engine
   → strategy-engine (candidate trade objects)
   → risk-engine (APPROVE | REDUCE | REJECT, machine-readable reasons)
