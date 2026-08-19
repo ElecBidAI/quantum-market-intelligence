@@ -3,9 +3,17 @@ import { createLogger } from "@qmi/observability";
 import { Pool } from "pg";
 import { createClient } from "redis";
 import { BinanceAdapter } from "./adapters/binance.js";
-import { insertOhlcv, insertOrderBookSnapshot, insertTrade } from "./persistence.js";
-import { bookChannel, ohlcvChannel, publishJson, tickChannel } from "./publish.js";
-import { BoundedIdSet, evaluateOhlcvQuality, evaluateOrderBookQuality, evaluateTradeQuality } from "./quality.js";
+import { BinanceFuturesAdapter } from "./adapters/binance-futures.js";
+import { insertBasis, insertFundingRate, insertOhlcv, insertOrderBookSnapshot, insertTrade } from "./persistence.js";
+import { basisChannel, bookChannel, fundingRateChannel, ohlcvChannel, publishJson, tickChannel } from "./publish.js";
+import {
+  BoundedIdSet,
+  evaluateBasisQuality,
+  evaluateFundingRateQuality,
+  evaluateOhlcvQuality,
+  evaluateOrderBookQuality,
+  evaluateTradeQuality,
+} from "./quality.js";
 import { PHASE1_SYMBOLS } from "./symbols.js";
 
 const TRADE_ID_DEDUPE_WINDOW = 5_000;
@@ -74,12 +82,48 @@ async function main(): Promise<void> {
     logger.error({ error: error.message }, "market-data adapter error");
   });
 
+  const futuresAdapter = new BinanceFuturesAdapter({ logger });
+
+  futuresAdapter.onFundingRate((fundingRate) => {
+    void (async () => {
+      const quality = evaluateFundingRateQuality(fundingRate, new Date());
+      const record = { ...fundingRate, qualityStatus: quality.qualityStatus };
+
+      await insertFundingRate(pool, record);
+      if (quality.qualityStatus !== "rejected") {
+        await publishJson(redis, fundingRateChannel(fundingRate.symbol), record);
+      } else {
+        logger.warn({ symbol: fundingRate.symbol, reasons: quality.reasons }, "funding rate rejected by quality gate");
+      }
+    })().catch((error: unknown) => logger.error({ error: String(error) }, "failed to handle funding rate"));
+  });
+
+  futuresAdapter.onBasis((basis) => {
+    void (async () => {
+      const quality = evaluateBasisQuality(basis, new Date());
+      const record = { ...basis, qualityStatus: quality.qualityStatus };
+
+      await insertBasis(pool, record);
+      if (quality.qualityStatus !== "rejected") {
+        await publishJson(redis, basisChannel(basis.symbol), record);
+      } else {
+        logger.warn({ symbol: basis.symbol, reasons: quality.reasons }, "basis rejected by quality gate");
+      }
+    })().catch((error: unknown) => logger.error({ error: String(error) }, "failed to handle basis"));
+  });
+
+  futuresAdapter.onError((error) => {
+    logger.error({ error: error.message }, "market-data futures adapter error");
+  });
+
   adapter.connect();
+  futuresAdapter.connect();
   logger.info({ symbols: PHASE1_SYMBOLS.map((s) => s.canonical) }, "market-data service started");
 
   const shutdown = async (): Promise<void> => {
     logger.info("shutting down market-data service");
     adapter.disconnect();
+    futuresAdapter.disconnect();
     await redis.quit();
     await pool.end();
     process.exit(0);

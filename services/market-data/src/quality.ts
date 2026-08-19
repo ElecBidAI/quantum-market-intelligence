@@ -1,4 +1,4 @@
-import type { Ohlcv, OrderBookSnapshot, QualityStatus, Trade } from "@qmi/contracts";
+import type { Basis, FundingRate, Ohlcv, OrderBookSnapshot, QualityStatus, Trade } from "@qmi/contracts";
 
 /**
  * Data-quality gates (docs/architecture/DATA-CONTRACTS.md Section 8). These
@@ -68,6 +68,36 @@ export function evaluateOrderBookQuality(
     return { qualityStatus: "rejected", reasons: ["CROSSED_BOOK"] };
   }
   const timestampIssue = checkTimestampSanity(snapshot.timestamp, now);
+  if (timestampIssue) return timestampIssue;
+  return OK;
+}
+
+// Binance's standard funding-rate collar is +/-0.75% for most symbols; a
+// reported rate beyond that is unusual enough to flag (still ingested,
+// never dropped — see the module docstring).
+export const EXTREME_FUNDING_RATE_THRESHOLD = 0.0075;
+// A perpetual's basis is normally kept tight by funding-driven arbitrage;
+// this is a generous outlier bound, not a hard exchange limit.
+export const EXTREME_BASIS_PCT_THRESHOLD = 0.05;
+
+export function evaluateFundingRateQuality(
+  fundingRate: FundingRate,
+  now: Date = new Date(),
+): QualityResult {
+  if (Math.abs(fundingRate.rate) > EXTREME_FUNDING_RATE_THRESHOLD) {
+    return { qualityStatus: "suspect", reasons: ["EXTREME_FUNDING_RATE"] };
+  }
+  const timestampIssue = checkTimestampSanity(fundingRate.timestamp, now);
+  if (timestampIssue) return timestampIssue;
+  return OK;
+}
+
+export function evaluateBasisQuality(basis: Basis, now: Date = new Date()): QualityResult {
+  const basisPct = basis.basis / basis.spotPrice;
+  if (Math.abs(basisPct) > EXTREME_BASIS_PCT_THRESHOLD) {
+    return { qualityStatus: "suspect", reasons: ["EXTREME_BASIS"] };
+  }
+  const timestampIssue = checkTimestampSanity(basis.timestamp, now);
   if (timestampIssue) return timestampIssue;
   return OK;
 }

@@ -130,9 +130,21 @@ or NEUTRAL), and `Auditor` (contradiction checks, e.g. a candidate's frozen
 `regime` field against a freshly-reclassified regime). `council.synthesize()` is
 the Chief Intelligence Agent: a confidence-weighted vote that a single `VETO`
 (only `RiskOfficer` can produce one) overrides unconditionally. No new
-persistence — see that service's README for why. All other directories still
-exist only as placeholders (`README.md` stubs) to fix the intended structure
-without pretending the functionality exists.
+persistence — see that service's README for why. Phase 9 added derivatives
+market data: `packages/contracts/src/derivatives.ts` (fundingRate, basis,
+openInterest, liquidationEvent, futuresCurvePoint schemas — only the first two
+are produced by anything yet), `quant_core.derivatives` (basis, annualized
+funding rate, leverage, liquidation price/buffer, open-interest-change
+formulas, each checked against an independently hand-computed reference value
+before the test was written), and `services/market-data`'s
+`BinanceFuturesAdapter` (USDT-M perpetuals `@markPrice@1s` stream → funding
+rate + futures-vs-index basis, persisted via
+`data/migrations/0007_derivatives.sql`). Open interest and liquidation events
+are schema-only so far — no producer exists (see that service's README for
+why). Options (Greeks, IV, smile/skew) are out of scope per the brief's own
+"options later" phrasing. All other directories still exist only as
+placeholders (`README.md` stubs) to fix the intended structure without
+pretending the functionality exists.
 
 ## 4. Stack decisions
 
@@ -198,7 +210,7 @@ Exchange WS/REST
   → analytics / research notebook / audit trail
 ```
 
-What's real as of Phase 8, and what isn't:
+What's real as of Phase 9, and what isn't:
 
 - **Real, end to end, but only against synthetic/in-process bars**: market-data →
   persistence → feature-engine → regime-engine → strategy-engine → risk-engine →
@@ -219,6 +231,10 @@ What's real as of Phase 8, and what isn't:
   schedule against live-ingested market data — it's a callable pipeline, not a
   daemon. portfolio-engine exists only as formulas (`quant_core.portfolio`), not a
   service that sizes an approved candidate before it reaches paper-execution.
+  Derivatives (Phase 9) are ingestion and analytics only — funding rate and basis
+  feed nothing downstream yet (no strategy consumes them, no derivatives position
+  can be opened anywhere in this repository); open interest and liquidation events
+  aren't ingested at all.
 
 ## 7. Observability
 

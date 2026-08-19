@@ -5,28 +5,30 @@ export const BINANCE_EXCHANGE = "binance";
 export const BINANCE_SOURCE = "binance-ws";
 const SCHEMA_VERSION = 1;
 
-class MalformedMessageError extends Error {
+// Shared with binance-futures-parsers.ts — one Binance wire format, one set
+// of "is this message well-formed" helpers, regardless of which stream.
+export class MalformedMessageError extends Error {
   constructor(streamKind: string, reason: string) {
     super(`malformed Binance ${streamKind} message: ${reason}`);
     this.name = "MalformedMessageError";
   }
 }
 
-function requireString(value: unknown, field: string, streamKind: string): string {
+export function requireString(value: unknown, field: string, streamKind: string): string {
   if (typeof value !== "string" || value.length === 0) {
     throw new MalformedMessageError(streamKind, `expected non-empty string field "${field}"`);
   }
   return value;
 }
 
-function requireNumber(value: unknown, field: string, streamKind: string): number {
+export function requireNumber(value: unknown, field: string, streamKind: string): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     throw new MalformedMessageError(streamKind, `expected finite number field "${field}"`);
   }
   return value;
 }
 
-function requireNumericString(value: unknown, field: string, streamKind: string): number {
+export function requireNumericString(value: unknown, field: string, streamKind: string): number {
   const raw = requireString(value, field, streamKind);
   const parsed = Number(raw);
   if (!Number.isFinite(parsed)) {
@@ -35,7 +37,7 @@ function requireNumericString(value: unknown, field: string, streamKind: string)
   return parsed;
 }
 
-function resolveCanonicalSymbol(binanceSymbol: string, streamKind: string): string {
+export function resolveCanonicalSymbol(binanceSymbol: string, streamKind: string): string {
   const canonical = toCanonicalSymbol(binanceSymbol);
   if (!canonical) {
     throw new MalformedMessageError(streamKind, `unknown symbol "${binanceSymbol}"`);

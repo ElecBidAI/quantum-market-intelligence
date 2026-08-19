@@ -5,23 +5,27 @@ Crypto-first, multi-asset-ready quantitative market intelligence platform.
 > **Core rule:** no AI agent, signal, strategy, or model may bypass the Risk Engine.
 > See [`docs/risk/RISK-GOVERNANCE.md`](docs/risk/RISK-GOVERNANCE.md).
 
-This repository is through **Phase 8 (AI Investment Council)**. There is still
+This repository is through **Phase 9 (Derivatives)**. There is still
 no real-money execution capability, but the core pipeline is real end to end:
 `services/regime-engine` classifies market regime, `services/strategy-engine`
 produces real `StrategyCandidate`s from three pluggable strategies (only in
 the regimes each declares), every candidate is run through
 `services/risk-engine`'s `evaluate()` gate, `services/paper-execution` turns
 an approved/reduced decision into a simulated order, fill, and tracked
-position (with reconciliation and performance analytics), and — new in
-Phase 8 — `services/ai-council`'s rule-based agents (Quant, Risk Officer,
-Devil's Advocate, Auditor, Chief Intelligence) analyze the same evidence
-alongside the pipeline, never executing anything themselves. Integration
-tests run the whole chain: bars → regime → candidate → risk decision →
-paper order → fill → position, with the council's synthesis checked
-alongside it. None of this runs on a schedule against live data yet (see
+position (with reconciliation and performance analytics), and
+`services/ai-council`'s rule-based agents (Quant, Risk Officer, Devil's
+Advocate, Auditor, Chief Intelligence) analyze the same evidence alongside the
+pipeline, never executing anything themselves. Integration tests run the
+whole chain: bars → regime → candidate → risk decision → paper order → fill →
+position, with the council's synthesis checked alongside it. None of this
+runs on a schedule against live data yet (see
 [`docs/architecture/QMI-MASTER-ARCHITECTURE.md`](docs/architecture/QMI-MASTER-ARCHITECTURE.md)
 Section 6 for exactly what's real vs. not). Live market data is real (Binance
 spot, BTC/ETH) but read-only: nothing in this repository can place a real order.
+New in Phase 9: `services/market-data`'s `BinanceFuturesAdapter` ingests
+perpetual-futures funding rate and futures-vs-index basis, and
+`packages/quant-core.derivatives` adds funding/basis/leverage/liquidation
+formulas — this is market data and analytics only, not derivatives trading.
 
 ## Repository layout
 

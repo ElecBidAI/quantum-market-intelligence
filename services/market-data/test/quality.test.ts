@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { Ohlcv, OrderBookSnapshot, Trade } from "@qmi/contracts";
+import type { Basis, FundingRate, Ohlcv, OrderBookSnapshot, Trade } from "@qmi/contracts";
 import {
   BoundedIdSet,
+  evaluateBasisQuality,
+  evaluateFundingRateQuality,
   evaluateOhlcvQuality,
   evaluateOrderBookQuality,
   evaluateTradeQuality,
@@ -57,6 +59,38 @@ function makeBar(overrides: Partial<Ohlcv> = {}): Ohlcv {
     low: 95,
     close: 105,
     volume: 10,
+    ...overrides,
+  };
+}
+
+function makeFundingRate(overrides: Partial<FundingRate> = {}): FundingRate {
+  return {
+    source: "binance-futures-ws",
+    exchange: "binance",
+    symbol: "BTC-USDT",
+    timestamp: NOW.toISOString(),
+    ingestedAt: NOW.toISOString(),
+    qualityStatus: "ok",
+    schemaVersion: 1,
+    rate: 0.0001,
+    intervalHours: 8,
+    ...overrides,
+  };
+}
+
+function makeBasis(overrides: Partial<Basis> = {}): Basis {
+  return {
+    source: "binance-futures-ws",
+    exchange: "binance",
+    symbol: "BTC-USDT",
+    timestamp: NOW.toISOString(),
+    ingestedAt: NOW.toISOString(),
+    qualityStatus: "ok",
+    schemaVersion: 1,
+    spotPrice: 65000,
+    futuresPrice: 65200,
+    basis: 200,
+    annualizedBasis: 200 / 65000,
     ...overrides,
   };
 }
@@ -120,6 +154,58 @@ describe("evaluateOrderBookQuality", () => {
       NOW,
     );
     expect(result.qualityStatus).toBe("rejected");
+  });
+});
+
+describe("evaluateFundingRateQuality", () => {
+  it("accepts a normal funding rate", () => {
+    expect(evaluateFundingRateQuality(makeFundingRate(), NOW)).toEqual({
+      qualityStatus: "ok",
+      reasons: [],
+    });
+  });
+
+  it("flags an extreme positive funding rate as suspect", () => {
+    const result = evaluateFundingRateQuality(makeFundingRate({ rate: 0.01 }), NOW);
+    expect(result.qualityStatus).toBe("suspect");
+    expect(result.reasons).toContain("EXTREME_FUNDING_RATE");
+  });
+
+  it("flags an extreme negative funding rate as suspect", () => {
+    const result = evaluateFundingRateQuality(makeFundingRate({ rate: -0.01 }), NOW);
+    expect(result.qualityStatus).toBe("suspect");
+    expect(result.reasons).toContain("EXTREME_FUNDING_RATE");
+  });
+
+  it("marks a stale funding rate as suspect", () => {
+    const staleTimestamp = new Date(NOW.getTime() - 60_000).toISOString();
+    const result = evaluateFundingRateQuality(makeFundingRate({ timestamp: staleTimestamp }), NOW);
+    expect(result.qualityStatus).toBe("suspect");
+    expect(result.reasons).toContain("STALE_FEED");
+  });
+});
+
+describe("evaluateBasisQuality", () => {
+  it("accepts a normal basis", () => {
+    expect(evaluateBasisQuality(makeBasis(), NOW)).toEqual({ qualityStatus: "ok", reasons: [] });
+  });
+
+  it("flags an extreme basis as suspect", () => {
+    const result = evaluateBasisQuality(
+      makeBasis({ spotPrice: 65000, futuresPrice: 65000 * 1.1, basis: 65000 * 0.1 }),
+      NOW,
+    );
+    expect(result.qualityStatus).toBe("suspect");
+    expect(result.reasons).toContain("EXTREME_BASIS");
+  });
+
+  it("flags an extreme negative basis (backwardation) as suspect", () => {
+    const result = evaluateBasisQuality(
+      makeBasis({ spotPrice: 65000, futuresPrice: 65000 * 0.9, basis: -65000 * 0.1 }),
+      NOW,
+    );
+    expect(result.qualityStatus).toBe("suspect");
+    expect(result.reasons).toContain("EXTREME_BASIS");
   });
 });
 

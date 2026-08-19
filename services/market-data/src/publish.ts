@@ -15,6 +15,12 @@ export function ohlcvChannel(symbol: string): string {
 export function bookChannel(symbol: string): string {
   return `qmi:book:${symbol}`;
 }
+export function fundingRateChannel(symbol: string): string {
+  return `qmi:funding:${symbol}`;
+}
+export function basisChannel(symbol: string): string {
+  return `qmi:basis:${symbol}`;
+}
 
 export async function publishJson(
   redis: Pick<RedisClientType, "publish">,

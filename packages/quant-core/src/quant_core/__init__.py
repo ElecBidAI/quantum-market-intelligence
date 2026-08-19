@@ -1,3 +1,15 @@
+from quant_core.derivatives import (
+    annualized_basis,
+    annualized_funding_rate,
+    basis,
+    basis_pct,
+    funding_pnl,
+    leverage,
+    liquidation_buffer_pct,
+    liquidation_price,
+    open_interest_change,
+    open_interest_change_pct,
+)
 from quant_core.portfolio import (
     component_risk_contribution as portfolio_component_risk_contribution,
 )
@@ -176,4 +188,15 @@ __all__ = [
     "iid_bootstrap_paths",
     "block_bootstrap_paths",
     "regime_conditioned_bootstrap_paths",
+    # derivatives
+    "basis",
+    "basis_pct",
+    "annualized_basis",
+    "annualized_funding_rate",
+    "funding_pnl",
+    "leverage",
+    "liquidation_price",
+    "liquidation_buffer_pct",
+    "open_interest_change",
+    "open_interest_change_pct",
 ]

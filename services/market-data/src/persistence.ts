@@ -1,4 +1,4 @@
-import type { Ohlcv, OrderBookSnapshot, Trade } from "@qmi/contracts";
+import type { Basis, FundingRate, Ohlcv, OrderBookSnapshot, Trade } from "@qmi/contracts";
 import type { Pool } from "pg";
 
 /**
@@ -74,6 +74,50 @@ export async function insertOrderBookSnapshot(pool: Pool, snapshot: OrderBookSna
       JSON.stringify(snapshot.bids),
       JSON.stringify(snapshot.asks),
       snapshot.sequenceId,
+    ],
+  );
+}
+
+export async function insertFundingRate(pool: Pool, fundingRate: FundingRate): Promise<void> {
+  await pool.query(
+    `INSERT INTO funding_rates
+       (source, exchange, symbol, "timestamp", ingested_at, quality_status, schema_version,
+        rate, interval_hours)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     ON CONFLICT (exchange, symbol, "timestamp") DO NOTHING`,
+    [
+      fundingRate.source,
+      fundingRate.exchange,
+      fundingRate.symbol,
+      fundingRate.timestamp,
+      fundingRate.ingestedAt,
+      fundingRate.qualityStatus,
+      fundingRate.schemaVersion,
+      fundingRate.rate,
+      fundingRate.intervalHours,
+    ],
+  );
+}
+
+export async function insertBasis(pool: Pool, basis: Basis): Promise<void> {
+  await pool.query(
+    `INSERT INTO futures_basis
+       (source, exchange, symbol, "timestamp", ingested_at, quality_status, schema_version,
+        spot_price, futures_price, basis, annualized_basis)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+     ON CONFLICT (exchange, symbol, "timestamp") DO NOTHING`,
+    [
+      basis.source,
+      basis.exchange,
+      basis.symbol,
+      basis.timestamp,
+      basis.ingestedAt,
+      basis.qualityStatus,
+      basis.schemaVersion,
+      basis.spotPrice,
+      basis.futuresPrice,
+      basis.basis,
+      basis.annualizedBasis,
     ],
   );
 }
