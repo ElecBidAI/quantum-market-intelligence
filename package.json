@@ -1,0 +1,23 @@
+{
+  "name": "qmi",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Quantum Market Intelligence — monorepo root",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@11.13.1",
+  "scripts": {
+    "build:packages": "pnpm --filter @qmi/contracts --filter @qmi/config --filter @qmi/observability run build",
+    "lint": "pnpm -r --if-present run lint",
+    "typecheck": "pnpm run build:packages && pnpm -r --if-present run typecheck",
+    "test": "pnpm run build:packages && pnpm -r --if-present run test",
+    "build": "pnpm run build:packages && pnpm -r --if-present run build"
+  },
+  "devDependencies": {
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0"
+  }
+}

@@ -1,0 +1,34 @@
+name: qmi
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-qmi}
+      POSTGRES_USER: ${POSTGRES_USER:-qmi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-qmi_dev_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - qmi_postgres_data:/var/lib/postgresql/data
+      - ./data/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-qmi} -d ${POSTGRES_DB:-qmi}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  qmi_postgres_data:

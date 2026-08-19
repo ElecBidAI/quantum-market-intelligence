@@ -1,0 +1,12 @@
+packages:
+  - "apps/*"
+  - "packages/contracts"
+  - "packages/config"
+  - "packages/observability"
+allowBuilds:
+  # esbuild ships a native binary post-install step used by vitest/tsx.
+  esbuild: true
+  # sharp is Next.js's optional native image-optimization dependency; not
+  # required for Phase 0 (placeholder page has no next/image usage), but
+  # harmless to allow so `next build` doesn't warn about a missing optional dep.
+  sharp: true
