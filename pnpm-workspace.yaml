@@ -5,6 +5,9 @@ packages:
   - "packages/observability"
   - "services/market-data"
 allowBuilds:
+  # argon2 ships a native binding compiled/installed via a post-install step
+  # (apps/api password hashing — docs/architecture/ACCESS-AND-LICENSING.md).
+  argon2: true
   # esbuild ships a native binary post-install step used by vitest/tsx.
   esbuild: true
   # sharp is Next.js's optional native image-optimization dependency; not

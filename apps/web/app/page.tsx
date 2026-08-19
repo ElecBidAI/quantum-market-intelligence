@@ -1,3 +1,4 @@
+import AuthGate from "./AuthGate";
 import MarketDashboard from "./MarketDashboard";
 
 export default function HomePage() {
@@ -12,7 +13,9 @@ export default function HomePage() {
         See <code>docs/architecture/QMI-MASTER-ARCHITECTURE.md</code> for the target
         architecture and development phases.
       </p>
-      <MarketDashboard />
+      <AuthGate>
+        <MarketDashboard />
+      </AuthGate>
     </main>
   );
 }

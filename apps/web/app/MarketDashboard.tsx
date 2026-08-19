@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
+import { apiFetch, apiStreamUrl } from "../lib/api-client";
 import {
   applyLatestSnapshot,
   applyOhlcvEvent,
@@ -11,7 +12,6 @@ import {
 } from "../lib/market-state";
 
 const SYMBOLS = ["BTC-USDT", "ETH-USDT"] as const;
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 type ConnectionStatus = "connecting" | "connected" | "error";
 
@@ -28,7 +28,7 @@ export default function MarketDashboard() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(`${API_URL}/market/latest?symbols=${SYMBOLS.join(",")}`)
+    apiFetch(`/market/latest?symbols=${SYMBOLS.join(",")}`)
       .then((res) => res.json())
       .then((body: { symbols: Parameters<typeof applyLatestSnapshot>[1] }) => {
         if (!cancelled) setState((prev) => applyLatestSnapshot(prev, body.symbols));
@@ -38,7 +38,7 @@ export default function MarketDashboard() {
         // source of truth once connected. We never substitute fake data.
       });
 
-    const source = new EventSource(`${API_URL}/stream/market?symbols=${SYMBOLS.join(",")}`);
+    const source = new EventSource(apiStreamUrl(`/stream/market?symbols=${SYMBOLS.join(",")}`));
 
     source.addEventListener("open", () => setStatus("connected"));
     source.addEventListener("error", () => setStatus("error"));
@@ -61,7 +61,7 @@ export default function MarketDashboard() {
     <section style={{ marginTop: "2rem" }}>
       <h2>Live prices</h2>
       <p style={{ color: "#666", fontSize: "0.9rem" }}>
-        Feed: {API_URL} — connection {status}. Prices below are only ever what the
+        Feed: /api (proxied) — connection {status}. Prices below are only ever what the
         exchange actually sent; a blank row means no data has arrived yet.
       </p>
       <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: 560 }}>

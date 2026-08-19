@@ -11,6 +11,20 @@ export const envSchema = z.object({
   API_PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().min(1).optional(),
   REDIS_URL: z.string().min(1).optional(),
+
+  // --- Auth (docs/architecture/ACCESS-AND-LICENSING.md) ---
+  SESSION_COOKIE_NAME: z.string().min(1).default("qmi_session"),
+  SESSION_TTL_SECONDS: z.coerce.number().int().positive().default(604_800), // 7 days
+  // 32-byte key (base64), used for AES-256-GCM encryption of stored SSO
+  // client secrets. If unset, apps/api does not register SSO routes at all
+  // (email/password auth still works) — see ACCESS-AND-LICENSING.md.
+  AUTH_ENCRYPTION_KEY: z.string().min(1).optional(),
+  // Externally-reachable base URL of apps/api itself (no trailing slash),
+  // used to build the OIDC redirect_uri registered with an identity
+  // provider. Distinct from NEXT_PUBLIC_API_URL, which is apps/web's view
+  // of the same service — kept separate since one is browser-facing and
+  // this one only matters server-to-server (this process to the IdP).
+  API_PUBLIC_URL: z.string().min(1).default("http://localhost:4000"),
 });
 export type Env = z.infer<typeof envSchema>;
 

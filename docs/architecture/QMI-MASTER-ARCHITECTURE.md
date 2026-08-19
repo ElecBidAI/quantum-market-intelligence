@@ -264,6 +264,13 @@ repository, no secrets are committed (`.env.example` documents required variable
 real values stay in untracked `.env` files or a secrets manager), and every risk
 decision will be logged immutably once the Risk Engine exists (Phase 3+).
 
+Separately from the quant/risk pipeline, [`docs/architecture/ACCESS-AND-LICENSING.md`](ACCESS-AND-LICENSING.md)
+covers who may call the platform at all: user accounts, opaque-token sessions,
+plan-based feature entitlements, and OIDC enterprise SSO, added after Phase 9. It
+has no bearing on the Risk Engine's authority — an authenticated, entitled request
+still produces a trading decision only by passing through `risk_engine.evaluate()`
+exactly as before.
+
 ## 10. Non-goals for this phase
 
 Matches [Section 24 of the implementation brief]: no profitability claims, no

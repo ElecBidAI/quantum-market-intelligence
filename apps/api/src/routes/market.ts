@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, preHandlerHookHandler } from "fastify";
 import { getLatestMarketState, type QueryablePool } from "../market-latest.js";
 import { buildSymbolChannels, type PubSub } from "../market-stream.js";
 
@@ -32,15 +32,25 @@ function parseSymbols(raw: unknown): string[] {
  *     relaying whatever services/market-data publishes to Redis. Never
  *     synthesizes data: if nothing has been published yet, the client just
  *     receives no events until something real arrives.
+ *
+ * Both routes require `preHandler` (an authenticated session with the
+ * `market-data:read` entitlement — see entitlements.ts's `protect()`,
+ * built and passed in by app.ts). This module deliberately doesn't import
+ * entitlements.ts itself, so a route module never has direct access to more
+ * than the specific preHandler chain its caller decided to give it.
  */
-export function registerMarketRoutes(app: FastifyInstance, deps: MarketRouteDeps): void {
-  app.get("/market/latest", async (request) => {
+export function registerMarketRoutes(
+  app: FastifyInstance,
+  deps: MarketRouteDeps,
+  preHandler: preHandlerHookHandler[],
+): void {
+  app.get("/market/latest", { preHandler }, async (request) => {
     const symbols = parseSymbols((request.query as Record<string, unknown>).symbols);
     const state = await getLatestMarketState(deps.pool, symbols);
     return { symbols: state };
   });
 
-  app.get("/stream/market", async (request, reply) => {
+  app.get("/stream/market", { preHandler }, async (request, reply) => {
     const symbols = parseSymbols((request.query as Record<string, unknown>).symbols);
     const channels = symbols.flatMap(buildSymbolChannels);
 

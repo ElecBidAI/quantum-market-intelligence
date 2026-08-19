@@ -27,6 +27,13 @@ perpetual-futures funding rate and futures-vs-index basis, and
 `packages/quant-core.derivatives` adds funding/basis/leverage/liquidation
 formulas — this is market data and analytics only, not derivatives trading.
 
+Separately from the phase roadmap, an **Access & Licensing** layer now sits in
+front of `apps/api`: user accounts, sessions, plan-based feature entitlements,
+and OIDC enterprise SSO — see
+[`docs/architecture/ACCESS-AND-LICENSING.md`](docs/architecture/ACCESS-AND-LICENSING.md).
+It gates who can call the platform; it has no bearing on the Risk Engine's
+authority over trading decisions.
+
 ## Repository layout
 
 See [`docs/architecture/QMI-MASTER-ARCHITECTURE.md`](docs/architecture/QMI-MASTER-ARCHITECTURE.md#3-monorepo-layout).

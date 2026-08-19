@@ -7,6 +7,9 @@ describe("loadEnv", () => {
     expect(env.NODE_ENV).toBe("development");
     expect(env.LOG_LEVEL).toBe("info");
     expect(env.API_PORT).toBe(4000);
+    expect(env.SESSION_COOKIE_NAME).toBe("qmi_session");
+    expect(env.SESSION_TTL_SECONDS).toBe(604_800);
+    expect(env.AUTH_ENCRYPTION_KEY).toBeUndefined();
   });
 
   it("coerces API_PORT from a string", () => {
