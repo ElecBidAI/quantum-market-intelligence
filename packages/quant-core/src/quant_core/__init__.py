@@ -34,6 +34,14 @@ from quant_core.risk import (
     ulcer_index,
     volatility_target_size,
 )
+from quant_core.simulation import (
+    block_bootstrap_paths,
+    gbm_paths,
+    iid_bootstrap_paths,
+    jump_diffusion_paths,
+    regime_conditioned_bootstrap_paths,
+    student_t_returns,
+)
 from quant_core.stats import (
     autocorrelation,
     confidence_interval_mean,
@@ -161,4 +169,11 @@ __all__ = [
     "portfolio_diversification_ratio",
     "portfolio_marginal_risk_contribution",
     "portfolio_component_risk_contribution",
+    # simulation
+    "gbm_paths",
+    "jump_diffusion_paths",
+    "student_t_returns",
+    "iid_bootstrap_paths",
+    "block_bootstrap_paths",
+    "regime_conditioned_bootstrap_paths",
 ]

@@ -93,9 +93,16 @@ event-driven, single-asset backtest engine with a structural no-look-ahead
 guarantee, a transaction-cost model, the standard performance-metrics suite
 (reusing `quant_core.risk`), walk-forward window splitting, and the reproducible
 `ExperimentRecord` from brief Section 17
-(`data/migrations/0004_backtests.sql`'s `backtests`/`research_runs` tables). All
-other directories still exist only as placeholders (`README.md` stubs) to fix the
-intended structure without pretending the functionality exists.
+(`data/migrations/0004_backtests.sql`'s `backtests`/`research_runs` tables). Phase 5
+added `packages/quant-core/src/quant_core/simulation.py` (GBM, jump diffusion,
+Student-t, iid/block/regime-conditioned bootstrap — all seeded and reproducible)
+and `services/simulation-engine`: trade-sequence Monte Carlo (percentiles,
+probability of loss/ruin/drawdown-exceeding, expected shortfall, recovery-time and
+loss-streak distributions) and the quantifiable stress scenarios (price shock,
+volatility multiplier, spread multiplier), persisted via
+`data/migrations/0005_simulation_runs.sql`. All other directories still exist only
+as placeholders (`README.md` stubs) to fix the intended structure without
+pretending the functionality exists.
 
 ## 4. Stack decisions
 

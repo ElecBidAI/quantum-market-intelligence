@@ -6,11 +6,15 @@ Mirrors the pipeline exactly:
     -> parameters -> costs/assumptions -> backtest -> walk-forward -> Monte Carlo
     -> stress tests -> risk review -> conclusion -> status
 
-`monte_carlo_summary`, `stress_test_summary`, and `risk_review` are optional
-(default None) because simulation-engine (Phase 5) and a wired-up
-risk-engine pipeline (Phases 6-7) don't exist yet — an experiment recorded
-today genuinely doesn't have those steps to report, and a None here is
-honest about that rather than a placeholder pretending they ran.
+`monte_carlo_summary` and `stress_test_summary` default to None but can now
+be filled from `services/simulation_engine`'s output
+(`monte_carlo.run_trade_sequence_monte_carlo`, `stress.run_price_shock_scenario`,
+Phase 5) — this dataclass doesn't import that service to avoid a circular
+dependency (simulation-engine already reuses backtester.costs), so populating
+them is the caller's job. `risk_review` still defaults to None because
+there's no wired-up risk-engine pipeline yet (Phases 6-7) to produce one; an
+experiment recorded today genuinely has no risk review to report, and None
+is honest about that rather than a placeholder pretending one ran.
 """
 
 from __future__ import annotations
