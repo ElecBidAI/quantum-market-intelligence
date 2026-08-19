@@ -101,7 +101,9 @@ liquidity/impact checks; they are independent gates that both must pass.
   services have no code path that can place an order, paper or real.
 - `services/paper-execution` only accepts candidates that already carry an
   `APPROVE`/`REDUCE` risk decision; it does not re-derive or trust a candidate's own
-  claimed edge.
+  claimed edge. As of Phase 7 this is enforced in code, not just policy:
+  `paper_execution.orders.create_order_from_decision` cannot construct an order from
+  a `REJECT` decision (or from no decision at all) — it raises.
 - Real-money execution (`services/execution`) does not exist as working code until
   Phase 10, and Phase 10 begins only after explicit human approval and all
   risk/security acceptance criteria pass (Section 22 of the brief).
@@ -163,10 +165,14 @@ which finally produces a real `StrategyCandidate` and, via
 `strategy_engine.risk_adapter.candidate_to_risk_request`, actually calls
 `evaluate()` — see `services/strategy-engine/tests/test_integration.py` for the
 proof: APPROVE, REJECT (kill switch), and REDUCE (oversized request) all exercised
-end to end. What's still missing is a *live* pipeline: nothing runs this on a
-schedule against ingested market data, there is no `services/paper-execution` to
-consume an approved/reduced candidate (Phase 7), and nothing yet writes to the
-`risk_decisions` table. This document exists so that:
+end to end. Phase 7 added `services/paper-execution`, which finally consumes a risk
+decision: `orders.create_order_from_decision` structurally cannot build an order
+from a `REJECT`, and `services/paper-execution/tests/test_integration.py` runs the
+complete chain — bars, regime, candidate, risk decision, paper order, simulated
+fill, position — end to end. What's still missing is a *live* pipeline: nothing runs
+this on a schedule against ingested market data, and nothing yet writes to the
+`risk_decisions` table (only `paper_orders`/`fills`/`portfolio_snapshots` have
+persistence wired up so far). This document exists so that:
 
 1. Every later phase is built against a stable, agreed policy instead of inventing risk
    rules ad hoc per feature.

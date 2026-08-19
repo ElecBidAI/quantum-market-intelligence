@@ -5,17 +5,20 @@ Crypto-first, multi-asset-ready quantitative market intelligence platform.
 > **Core rule:** no AI agent, signal, strategy, or model may bypass the Risk Engine.
 > See [`docs/risk/RISK-GOVERNANCE.md`](docs/risk/RISK-GOVERNANCE.md).
 
-This repository is through **Phase 6 (Opportunity Radar)**. There is still no
-execution capability, but the core pipeline is real end to end for the first
-time: `services/regime-engine` classifies market regime,
-`services/strategy-engine` produces real `StrategyCandidate`s from three
-pluggable strategies (only in the regimes each declares), and every candidate
-is actually run through `services/risk-engine`'s `evaluate()` gate — proven by
-an integration test that checks APPROVE, REJECT, and REDUCE all happen. None
-of this runs on a schedule against live data yet (see
+This repository is through **Phase 7 (Paper Trading)**. There is still no
+real-money execution capability, but the core pipeline is real end to end:
+`services/regime-engine` classifies market regime, `services/strategy-engine`
+produces real `StrategyCandidate`s from three pluggable strategies (only in
+the regimes each declares), every candidate is run through
+`services/risk-engine`'s `evaluate()` gate, and — new in Phase 7 —
+`services/paper-execution` turns an approved/reduced decision into a
+simulated order, fill, and tracked position, with reconciliation and
+performance analytics. An integration test runs the whole chain: bars →
+regime → candidate → risk decision → paper order → fill → position. None of
+this runs on a schedule against live data yet (see
 [`docs/architecture/QMI-MASTER-ARCHITECTURE.md`](docs/architecture/QMI-MASTER-ARCHITECTURE.md)
 Section 6 for exactly what's real vs. not). Live market data is real (Binance
-spot, BTC/ETH) but read-only: nothing in this repository can place an order.
+spot, BTC/ETH) but read-only: nothing in this repository can place a real order.
 
 ## Repository layout
 
@@ -35,7 +38,7 @@ yet contains a `README.md` explaining what it will hold and which phase implemen
 cp .env.example .env        # fill in local values; never commit .env
 
 docker compose up -d        # Postgres/TimescaleDB + Redis
-# apply data/migrations/*.sql in order (0001-0005) against $DATABASE_URL
+# apply data/migrations/*.sql in order (0001-0006) against $DATABASE_URL
 # (docker-compose.yml also auto-applies them for a fresh volume)
 
 pnpm install                 # installs apps/*, packages/contracts, packages/config,
@@ -47,7 +50,8 @@ pip install -e "packages/quant-core[dev]" \
             -e "services/backtester[dev]" \
             -e "services/simulation-engine[dev]" \
             -e "services/regime-engine[dev]" \
-            -e "services/strategy-engine[dev]"
+            -e "services/strategy-engine[dev]" \
+            -e "services/paper-execution[dev]"
 
 pnpm lint
 pnpm typecheck
@@ -61,7 +65,7 @@ collision between two packages that both have a `tests/test_engine.py`):
 ```bash
 pytest --import-mode=importlib packages/quant-core/tests services/feature-engine/tests \
        services/risk-engine/tests services/backtester/tests services/simulation-engine/tests \
-       services/regime-engine/tests services/strategy-engine/tests
+       services/regime-engine/tests services/strategy-engine/tests services/paper-execution/tests
 ```
 
 ## Running the live stack locally
@@ -96,6 +100,7 @@ curl -N http://localhost:4000/stream/market?symbols=BTC-USDT   # live SSE feed
 - [`services/simulation-engine/README.md`](services/simulation-engine/README.md) — trade-sequence Monte Carlo and stress testing, and which stress scenarios are deferred.
 - [`services/regime-engine/README.md`](services/regime-engine/README.md) — the rule-based regime classifier and its confidence heuristic.
 - [`services/strategy-engine/README.md`](services/strategy-engine/README.md) — the three pluggable strategies, the QMI scores, and how a candidate reaches the risk gate.
+- [`services/paper-execution/README.md`](services/paper-execution/README.md) — simulated orders/fills, position tracking, reconciliation, and performance analytics.
 
 ## Non-goals (see the implementation brief, Section 24)
 

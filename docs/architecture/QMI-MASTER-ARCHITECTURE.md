@@ -109,9 +109,20 @@ scores (Opportunity/Risk/Confidence/Net Edge, brief Section 15); and — for the
 first time — a real connection from a produced `StrategyCandidate` through to
 `risk_engine.evaluate()` (`strategy_engine.risk_adapter`), proven by an
 end-to-end integration test. Candidates persist into the `signals` table that has
-existed since Phase 0. All other directories still exist only as placeholders
-(`README.md` stubs) to fix the intended structure without pretending the
-functionality exists.
+existed since Phase 0. Phase 7 added `services/paper-execution`: `orders.py`'s
+`create_order_from_decision` is structurally unable to build an order from a
+`REJECT` decision; `fills.py` simulates a full, immediate fill offset by
+spread+slippage; `positions.py` tracks positions with weighted-average-entry
+accounting and provides **reconciliation** (`replay_positions`/`reconcile`,
+diffing a from-scratch fill-ledger replay against the live book); `analytics.py`
+reuses `backtester.metrics` so paper results are directly comparable to the
+backtest that justified the strategy. New tables:
+`data/migrations/0006_paper_execution.sql`'s `paper_orders`/`fills`/
+`portfolio_snapshots` (no separate `positions` table — see that migration's
+comment). `services/paper-execution/tests/test_integration.py` runs the complete
+chain bars → regime → candidate → risk decision → paper order → fill → position
+end to end. All other directories still exist only as placeholders (`README.md`
+stubs) to fix the intended structure without pretending the functionality exists.
 
 ## 4. Stack decisions
 
@@ -177,20 +188,20 @@ Exchange WS/REST
   → analytics / research notebook / audit trail
 ```
 
-What's real as of Phase 6, and what isn't:
+What's real as of Phase 7, and what isn't:
 
 - **Real, end to end, but only against synthetic/in-process bars**: market-data →
-  persistence → feature-engine → regime-engine → strategy-engine → risk-engine.
-  `services/strategy-engine/tests/test_integration.py` runs this exact chain and
-  checks APPROVE/REDUCE/REJECT all actually happen.
+  persistence → feature-engine → regime-engine → strategy-engine → risk-engine →
+  paper-execution. `services/paper-execution/tests/test_integration.py` runs this
+  exact chain — bars, regime, candidate, risk decision, paper order, simulated
+  fill, position — and checks a `REJECT` decision never reaches a fill.
 - **Real but not chained to the above**: forecast-engine doesn't exist;
   statistical-engine/microstructure-engine don't exist as separate services (their
   formulas live in quant-core, see those services' READMEs).
-- **Not real**: nothing runs the strategy→risk chain on a schedule against
-  live-ingested market data — it's a callable pipeline, not a daemon.
+- **Not real**: nothing runs the strategy→risk→paper-execution chain on a schedule
+  against live-ingested market data — it's a callable pipeline, not a daemon.
   portfolio-engine exists only as formulas (`quant_core.portfolio`), not a service
-  that sizes an approved candidate. paper-execution doesn't exist (Phase 7), so
-  nothing consumes a risk-engine decision yet.
+  that sizes an approved candidate before it reaches paper-execution.
 
 ## 7. Observability
 
