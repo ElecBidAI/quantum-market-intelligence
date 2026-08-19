@@ -100,9 +100,18 @@ and `services/simulation-engine`: trade-sequence Monte Carlo (percentiles,
 probability of loss/ruin/drawdown-exceeding, expected shortfall, recovery-time and
 loss-streak distributions) and the quantifiable stress scenarios (price shock,
 volatility multiplier, spread multiplier), persisted via
-`data/migrations/0005_simulation_runs.sql`. All other directories still exist only
-as placeholders (`README.md` stubs) to fix the intended structure without
-pretending the functionality exists.
+`data/migrations/0005_simulation_runs.sql`. Phase 6 added `services/regime-engine`
+(rule-based classification into the brief's eight minimum regime labels, with a
+confidence heuristic) and `services/strategy-engine`: three concrete strategies
+(trend-following, mean-reversion, breakout), each declaring which regimes it may
+operate in, enforced structurally by `engine.run_strategies`; the QMI transparent
+scores (Opportunity/Risk/Confidence/Net Edge, brief Section 15); and — for the
+first time — a real connection from a produced `StrategyCandidate` through to
+`risk_engine.evaluate()` (`strategy_engine.risk_adapter`), proven by an
+end-to-end integration test. Candidates persist into the `signals` table that has
+existed since Phase 0. All other directories still exist only as placeholders
+(`README.md` stubs) to fix the intended structure without pretending the
+functionality exists.
 
 ## 4. Stack decisions
 
@@ -153,13 +162,13 @@ pretending the functionality exists.
 - **All timestamps are UTC** at every layer (ingestion, storage, API, UI display may
   localize, but the source of truth is UTC).
 
-## 6. Data flow (target; through Phase 2, market-data → persistence → feature-engine is real)
+## 6. Data flow (target)
 
 ```
 Exchange WS/REST
   → market-data (normalize, dedupe, timestamp, quality-tag)
   → persistence (market_ticks, ohlcv, orderbook_snapshots/deltas)
-  → feature-engine (real, batch) / statistical-engine / microstructure-engine (not implemented)
+  → feature-engine / statistical-engine / microstructure-engine
   → forecast-engine, regime-engine
   → strategy-engine (candidate trade objects)
   → risk-engine (APPROVE | REDUCE | REJECT, machine-readable reasons)
@@ -167,6 +176,21 @@ Exchange WS/REST
   → paper-execution (simulated fills)
   → analytics / research notebook / audit trail
 ```
+
+What's real as of Phase 6, and what isn't:
+
+- **Real, end to end, but only against synthetic/in-process bars**: market-data →
+  persistence → feature-engine → regime-engine → strategy-engine → risk-engine.
+  `services/strategy-engine/tests/test_integration.py` runs this exact chain and
+  checks APPROVE/REDUCE/REJECT all actually happen.
+- **Real but not chained to the above**: forecast-engine doesn't exist;
+  statistical-engine/microstructure-engine don't exist as separate services (their
+  formulas live in quant-core, see those services' READMEs).
+- **Not real**: nothing runs the strategy→risk chain on a schedule against
+  live-ingested market data — it's a callable pipeline, not a daemon.
+  portfolio-engine exists only as formulas (`quant_core.portfolio`), not a service
+  that sizes an approved candidate. paper-execution doesn't exist (Phase 7), so
+  nothing consumes a risk-engine decision yet.
 
 ## 7. Observability
 

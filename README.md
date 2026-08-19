@@ -5,15 +5,17 @@ Crypto-first, multi-asset-ready quantitative market intelligence platform.
 > **Core rule:** no AI agent, signal, strategy, or model may bypass the Risk Engine.
 > See [`docs/risk/RISK-GOVERNANCE.md`](docs/risk/RISK-GOVERNANCE.md).
 
-This repository is through **Phase 5 (Simulation Engine)**. There is still no
-strategy-engine and no execution capability — `services/risk-engine`'s
-`evaluate()` (the APPROVE/REDUCE/REJECT gate), `services/backtester`'s
-event-driven engine, and `services/simulation-engine`'s Monte Carlo/stress
-testing are all implemented and fully tested, but nothing calls them yet in a
-live pipeline because nothing produces real strategy candidates yet. See
+This repository is through **Phase 6 (Opportunity Radar)**. There is still no
+execution capability, but the core pipeline is real end to end for the first
+time: `services/regime-engine` classifies market regime,
+`services/strategy-engine` produces real `StrategyCandidate`s from three
+pluggable strategies (only in the regimes each declares), and every candidate
+is actually run through `services/risk-engine`'s `evaluate()` gate — proven by
+an integration test that checks APPROVE, REJECT, and REDUCE all happen. None
+of this runs on a schedule against live data yet (see
 [`docs/architecture/QMI-MASTER-ARCHITECTURE.md`](docs/architecture/QMI-MASTER-ARCHITECTURE.md)
-for the full plan and what exists today. Live market data is real (Binance spot,
-BTC/ETH) but read-only: nothing in this repository can place an order.
+Section 6 for exactly what's real vs. not). Live market data is real (Binance
+spot, BTC/ETH) but read-only: nothing in this repository can place an order.
 
 ## Repository layout
 
@@ -43,7 +45,9 @@ pip install -e "packages/quant-core[dev]" \
             -e "services/feature-engine[dev]" \
             -e "services/risk-engine[dev]" \
             -e "services/backtester[dev]" \
-            -e "services/simulation-engine[dev]"
+            -e "services/simulation-engine[dev]" \
+            -e "services/regime-engine[dev]" \
+            -e "services/strategy-engine[dev]"
 
 pnpm lint
 pnpm typecheck
@@ -56,7 +60,8 @@ collision between two packages that both have a `tests/test_engine.py`):
 
 ```bash
 pytest --import-mode=importlib packages/quant-core/tests services/feature-engine/tests \
-       services/risk-engine/tests services/backtester/tests services/simulation-engine/tests
+       services/risk-engine/tests services/backtester/tests services/simulation-engine/tests \
+       services/regime-engine/tests services/strategy-engine/tests
 ```
 
 ## Running the live stack locally
@@ -86,9 +91,11 @@ curl -N http://localhost:4000/stream/market?symbols=BTC-USDT   # live SSE feed
 - [`docs/risk/RISK-GOVERNANCE.md`](docs/risk/RISK-GOVERNANCE.md) — binding risk policy, enforced starting Phase 3.
 - [`services/market-data/README.md`](services/market-data/README.md) — what the Binance adapter does and doesn't ingest yet.
 - [`services/feature-engine/README.md`](services/feature-engine/README.md) — how OHLCV becomes a feature vector, and what's deferred.
-- [`services/risk-engine/README.md`](services/risk-engine/README.md) — the APPROVE/REDUCE/REJECT gate: what it checks, what's deferred, why it isn't wired into a pipeline yet.
+- [`services/risk-engine/README.md`](services/risk-engine/README.md) — the APPROVE/REDUCE/REJECT gate: what it checks, what's deferred.
 - [`services/backtester/README.md`](services/backtester/README.md) — the event-driven backtest engine, its no-look-ahead guarantee, and what's deferred.
 - [`services/simulation-engine/README.md`](services/simulation-engine/README.md) — trade-sequence Monte Carlo and stress testing, and which stress scenarios are deferred.
+- [`services/regime-engine/README.md`](services/regime-engine/README.md) — the rule-based regime classifier and its confidence heuristic.
+- [`services/strategy-engine/README.md`](services/strategy-engine/README.md) — the three pluggable strategies, the QMI scores, and how a candidate reaches the risk gate.
 
 ## Non-goals (see the implementation brief, Section 24)
 

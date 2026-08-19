@@ -158,10 +158,15 @@ process. `APPROVED` in the notebook and Phase 10 go-live are two different gates
 Through Phase 2, none of the above was enforceable by running code — there was no
 Risk Engine, Strategy Engine, or execution service. Phase 3 added
 `services/risk-engine`'s `evaluate()` (Sections 2, 3, 5, and 6 of this document are
-now real, tested code, not just policy prose), but it is **not wired into a live
-pipeline**: there is still no `services/strategy-engine` to call it and no
-`services/paper-execution` to consume its output (Phases 6-7), and nothing yet
-writes to the `risk_decisions` table. This document exists so that:
+now real, tested code, not just policy prose). Phase 6 added `services/strategy-engine`,
+which finally produces a real `StrategyCandidate` and, via
+`strategy_engine.risk_adapter.candidate_to_risk_request`, actually calls
+`evaluate()` — see `services/strategy-engine/tests/test_integration.py` for the
+proof: APPROVE, REJECT (kill switch), and REDUCE (oversized request) all exercised
+end to end. What's still missing is a *live* pipeline: nothing runs this on a
+schedule against ingested market data, there is no `services/paper-execution` to
+consume an approved/reduced candidate (Phase 7), and nothing yet writes to the
+`risk_decisions` table. This document exists so that:
 
 1. Every later phase is built against a stable, agreed policy instead of inventing risk
    rules ad hoc per feature.
