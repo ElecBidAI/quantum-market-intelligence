@@ -80,9 +80,17 @@ volatility estimators, technical indicators — brief Section 4) and added
 `services/feature-engine`, a batch job that turns ingested OHLCV into a versioned
 feature vector (`data/migrations/0003_features.sql`); `services/statistical-engine`
 and `services/microstructure-engine` remain unimplemented as separate services (see
-their READMEs for why). All other directories still exist only as placeholders
-(`README.md` stubs) to fix the intended structure without pretending the
-functionality exists.
+their READMEs for why). Phase 3 added `packages/quant-core/src/quant_core/risk.py`
+and `portfolio.py` (VaR/CVaR, drawdown, sizing, exposure/concentration, mean-variance
+and risk-parity allocation) and `services/risk-engine`: `evaluate()`, the mandatory
+APPROVE/REDUCE/REJECT gate (docs/risk/RISK-GOVERNANCE.md), fully tested standalone
+but not yet wired into a live pipeline — there is no strategy-engine to call it or
+paper-execution to consume its output yet (Phases 6-7). `services/portfolio-engine`
+remains unimplemented as a separate service for the same reason feature-engine
+started as a batch job: no live consumer (forecast-engine) supplies real
+expected-return/covariance inputs yet. All other directories still exist only as
+placeholders (`README.md` stubs) to fix the intended structure without pretending
+the functionality exists.
 
 ## 4. Stack decisions
 

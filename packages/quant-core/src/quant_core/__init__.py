@@ -1,3 +1,12 @@
+from quant_core.portfolio import (
+    component_risk_contribution as portfolio_component_risk_contribution,
+)
+from quant_core.portfolio import diversification_ratio as portfolio_diversification_ratio
+from quant_core.portfolio import expected_return as portfolio_expected_return
+from quant_core.portfolio import marginal_risk_contribution as portfolio_marginal_risk_contribution
+from quant_core.portfolio import max_sharpe_weights, min_variance_weights, risk_parity_weights
+from quant_core.portfolio import variance as portfolio_variance
+from quant_core.portfolio import volatility as portfolio_volatility
 from quant_core.returns import (
     annualized_return,
     cumulative_return,
@@ -5,6 +14,25 @@ from quant_core.returns import (
     log_returns,
     simple_return,
     simple_returns,
+)
+from quant_core.risk import (
+    atr_based_size,
+    beta,
+    concentration_hhi,
+    cvar,
+    downside_deviation,
+    fixed_fractional_size,
+    fractional_kelly_size,
+    gross_exposure,
+    historical_var,
+    information_ratio,
+    max_drawdown,
+    net_exposure,
+    omega_ratio,
+    parametric_var,
+    tracking_error,
+    ulcer_index,
+    volatility_target_size,
 )
 from quant_core.stats import (
     autocorrelation,
@@ -105,4 +133,32 @@ __all__ = [
     "donchian_channel",
     "keltner_channel",
     "spread_zscore",
+    # risk
+    "historical_var",
+    "parametric_var",
+    "cvar",
+    "max_drawdown",
+    "downside_deviation",
+    "ulcer_index",
+    "beta",
+    "tracking_error",
+    "information_ratio",
+    "omega_ratio",
+    "fixed_fractional_size",
+    "atr_based_size",
+    "volatility_target_size",
+    "fractional_kelly_size",
+    "gross_exposure",
+    "net_exposure",
+    "concentration_hhi",
+    # portfolio (prefixed to avoid colliding with stats.variance / a future risk.volatility)
+    "portfolio_expected_return",
+    "portfolio_variance",
+    "portfolio_volatility",
+    "min_variance_weights",
+    "max_sharpe_weights",
+    "risk_parity_weights",
+    "portfolio_diversification_ratio",
+    "portfolio_marginal_risk_contribution",
+    "portfolio_component_risk_contribution",
 ]

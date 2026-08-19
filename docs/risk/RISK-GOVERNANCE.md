@@ -153,16 +153,22 @@ REJECTED | RESEARCH | PAPER | APPROVED
 eligible for real-capital consideration under Phase 10's separate human-approval
 process. `APPROVED` in the notebook and Phase 10 go-live are two different gates.
 
-## 11. What Phase 0 actually enforces
+## 11. What's actually enforceable by running code today
 
-None of the above is enforceable by running code yet — there is no Risk Engine,
-Strategy Engine, or execution service in Phase 0. This document exists now so that:
+Through Phase 2, none of the above was enforceable by running code — there was no
+Risk Engine, Strategy Engine, or execution service. Phase 3 added
+`services/risk-engine`'s `evaluate()` (Sections 2, 3, 5, and 6 of this document are
+now real, tested code, not just policy prose), but it is **not wired into a live
+pipeline**: there is still no `services/strategy-engine` to call it and no
+`services/paper-execution` to consume its output (Phases 6-7), and nothing yet
+writes to the `risk_decisions` table. This document exists so that:
 
 1. Every later phase is built against a stable, agreed policy instead of inventing risk
    rules ad hoc per feature.
 2. `packages/contracts` already encodes the `RiskDecision` shape (Section 7 of
-   `DATA-CONTRACTS.md`), so nothing downstream can be wired up without going through
-   that shape.
+   `DATA-CONTRACTS.md`), and `services/risk-engine.evaluate()` already returns exactly
+   that shape, so nothing downstream can be wired up without going through it.
 3. Reviewers have a checklist: any PR that lets a strategy/candidate/model output
-   reach `paper-execution` or `execution` without passing through a risk decision is a
-   policy violation, independent of how good the code otherwise looks.
+   reach `paper-execution` or `execution` without passing through
+   `risk_engine.evaluate()` is a policy violation, independent of how good the code
+   otherwise looks.

@@ -1,11 +1,9 @@
 [project]
-name = "quant-core"
+name = "risk-engine"
 version = "0.0.0"
-description = "Reusable, tested quantitative formulas for QMI (docs/architecture/QMI-MASTER-ARCHITECTURE.md)"
+description = "Mandatory APPROVE/REDUCE/REJECT gate (docs/risk/RISK-GOVERNANCE.md) — no strategy candidate reaches paper/live execution without going through this"
 requires-python = ">=3.11"
-dependencies = [
-    "numpy>=1.26",
-]
+dependencies = []
 
 [project.optional-dependencies]
 dev = [

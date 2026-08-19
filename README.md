@@ -5,9 +5,11 @@ Crypto-first, multi-asset-ready quantitative market intelligence platform.
 > **Core rule:** no AI agent, signal, strategy, or model may bypass the Risk Engine.
 > See [`docs/risk/RISK-GOVERNANCE.md`](docs/risk/RISK-GOVERNANCE.md).
 
-This repository is through **Phase 2 (Quant Core)**. There are no strategies, no risk
-engine, and no execution capability yet — see
-[`docs/architecture/QMI-MASTER-ARCHITECTURE.md`](docs/architecture/QMI-MASTER-ARCHITECTURE.md)
+This repository is through **Phase 3 (Risk + Portfolio)**. There is still no
+strategy-engine and no execution capability — `services/risk-engine`'s
+`evaluate()` (the APPROVE/REDUCE/REJECT gate) is implemented and fully tested,
+but nothing calls it yet because nothing produces real strategy candidates yet.
+See [`docs/architecture/QMI-MASTER-ARCHITECTURE.md`](docs/architecture/QMI-MASTER-ARCHITECTURE.md)
 for the full plan and what exists today. Live market data is real (Binance spot,
 BTC/ETH) but read-only: nothing in this repository can place an order.
 
@@ -35,7 +37,9 @@ docker compose up -d        # Postgres/TimescaleDB + Redis
 pnpm install                 # installs apps/*, packages/contracts, packages/config,
                               # packages/observability, services/market-data
 
-pip install -e "packages/quant-core[dev]" -e "services/feature-engine[dev]"
+pip install -e "packages/quant-core[dev]" \
+            -e "services/feature-engine[dev]" \
+            -e "services/risk-engine[dev]"
 
 pnpm lint
 pnpm typecheck
@@ -46,7 +50,7 @@ pnpm build
 Run the Python tests separately:
 
 ```bash
-pytest packages/quant-core/tests services/feature-engine/tests
+pytest packages/quant-core/tests services/feature-engine/tests services/risk-engine/tests
 ```
 
 ## Running the live stack locally
@@ -76,6 +80,7 @@ curl -N http://localhost:4000/stream/market?symbols=BTC-USDT   # live SSE feed
 - [`docs/risk/RISK-GOVERNANCE.md`](docs/risk/RISK-GOVERNANCE.md) — binding risk policy, enforced starting Phase 3.
 - [`services/market-data/README.md`](services/market-data/README.md) — what the Binance adapter does and doesn't ingest yet.
 - [`services/feature-engine/README.md`](services/feature-engine/README.md) — how OHLCV becomes a feature vector, and what's deferred.
+- [`services/risk-engine/README.md`](services/risk-engine/README.md) — the APPROVE/REDUCE/REJECT gate: what it checks, what's deferred, why it isn't wired into a pipeline yet.
 
 ## Non-goals (see the implementation brief, Section 24)
 
