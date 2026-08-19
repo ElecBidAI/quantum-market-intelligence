@@ -174,6 +174,12 @@ Applied before a record's `qualityStatus` is set to `"ok"`:
 data.** A record that fails a gate is marked `"suspect"` or `"rejected"` and carries
 that status downstream; it is not corrected and re-labeled `"ok"` automatically.
 
+`services/market-data/src/quality.ts` (Phase 1) implements crossed books, stale
+feeds, abnormal (future) timestamps, and duplicate ticks. Missing-interval detection,
+outlier detection, and exchange-disconnect detection are not implemented yet — they
+need a baseline of real ingested data to define "expected cadence" and "abnormal"
+against, which Phase 1 is what starts producing.
+
 ## 9. Database domains (target, Section 20 of the brief)
 
 `market_ticks`, `ohlcv`, `orderbook_snapshots`, `orderbook_deltas`,
@@ -182,11 +188,15 @@ that status downstream; it is not corrected and re-labeled `"ok"` automatically.
 `research_runs`, `model_registry`, `paper_orders`, `fills`, `positions`,
 `portfolio_snapshots`, `audit_events`.
 
-Phase 0 (`data/migrations/0001_init.sql`) creates only `signals`, `risk_decisions`,
-and `audit_events` — the three tables that directly correspond to the contracts
-already implemented in code (Section 6, Section 7, and a minimal audit trail). The
-remaining tables are created in the phases that first read or write them, so schema
-and code land together instead of the schema guessing ahead of usage.
+Phase 0 (`data/migrations/0001_init.sql`) created `signals`, `risk_decisions`, and
+`audit_events` — the tables that directly correspond to the contracts implemented
+before there was any ingestion pipeline (Section 6, Section 7, and a minimal audit
+trail). Phase 1 (`data/migrations/0002_market_data.sql`) added `market_ticks`, `ohlcv`,
+and `orderbook_snapshots`, written by `services/market-data`'s Binance adapter
+(Section 3.1, 3.2, 3.4). `orderbook_deltas` and the remaining tables in this list are
+still deferred to whichever phase first reads or writes them — Phase 1 ingests
+top-of-book snapshots only (see `services/market-data/README.md`), not incremental
+diffs, so `orderbook_deltas` has no producer yet.
 
 ## 10. Source of truth
 

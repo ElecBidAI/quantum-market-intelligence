@@ -70,17 +70,26 @@ qmi/
     regression/
 ```
 
-Only `packages/contracts`, `packages/config`, `packages/observability`,
+Phase 0 implemented `packages/contracts`, `packages/config`, `packages/observability`,
 `packages/quant-core`, a minimal `apps/api` health service, a minimal `apps/web`
-placeholder, and `data/migrations/0001_init.sql` are implemented in Phase 0. All other
-directories exist as placeholders (`README.md` stubs) to fix the intended structure
-without pretending the functionality exists.
+placeholder, and `data/migrations/0001_init.sql`. Phase 1 added `services/market-data`
+(one exchange adapter, Binance spot, BTC/ETH), `data/migrations/0002_market_data.sql`,
+a `/market/latest` + `/stream/market` live-data path in `apps/api`, and a live price
+panel in `apps/web`. All other directories still exist only as placeholders
+(`README.md` stubs) to fix the intended structure without pretending the
+functionality exists.
 
-## 4. Stack decisions (Phase 0)
+## 4. Stack decisions
 
 - **Web**: Next.js (App Router) + TypeScript. Package manager: pnpm workspaces.
 - **API gateway**: Fastify + TypeScript (lightweight, typed, good for a thin
   orchestration layer that will later proxy to Python services).
+- **Market-data ingestion** (`services/market-data`): TypeScript/Node, not Python.
+  This service is I/O-bound (WebSocket ingestion, JSON parsing, Postgres/Redis
+  writes), not numerically heavy, and sharing `@qmi/contracts` types directly with
+  `apps/api` outweighs following the general "quant services are Python" rule for
+  this one adapter-shaped service. Compute-heavy `*-engine` services remain Python
+  per the rule below.
 - **Quantitative services**: Python 3.12. Phase 0 ships only `packages/quant-core`
   (pure functions + pytest). Services under `services/*` are scaffolding for later
   phases and are not implemented yet.
@@ -88,9 +97,12 @@ without pretending the functionality exists.
   ClickHouse is a documented future option for very high-cardinality tick data but is
   not part of Phase 0.
 - **Cache/ephemeral state**: Redis.
-- **Event streaming**: no concrete choice is wired up yet. The `packages/contracts`
-  event schemas are written to be transport-agnostic so NATS, Kafka, or Redis Streams
-  can be adopted later without reshaping the payloads.
+- **Event streaming**: still no durable event-streaming choice (NATS/Kafka/Redis
+  Streams) — Section 11's open decision stands. Phase 1 uses plain Redis pub/sub
+  (`services/market-data/src/publish.ts`) strictly as ephemeral live-UI fan-out for
+  `apps/api`'s SSE stream; it is not a durable log, has no replay, and is not what
+  future consumers (feature-engine, etc.) should build against. Postgres remains the
+  durable source of truth for everything market-data ingests.
 - **Local dev**: Docker Compose (`docker-compose.yml`) runs Postgres/TimescaleDB and
   Redis. Application processes run on the host during Phase 0 for fast iteration.
 

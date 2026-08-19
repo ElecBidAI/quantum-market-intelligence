@@ -2,13 +2,14 @@
   "name": "@qmi/web",
   "version": "0.0.0",
   "private": true,
-  "description": "QMI dashboard (Phase 0: placeholder status page only)",
+  "description": "QMI dashboard (Phase 1: live BTC/ETH price panel over SSE)",
   "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -20,6 +21,7 @@
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.17",
     "@types/react-dom": "^18.3.5",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }

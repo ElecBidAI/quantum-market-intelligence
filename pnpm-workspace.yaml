@@ -3,6 +3,7 @@ packages:
   - "packages/contracts"
   - "packages/config"
   - "packages/observability"
+  - "services/market-data"
 allowBuilds:
   # esbuild ships a native binary post-install step used by vitest/tsx.
   esbuild: true

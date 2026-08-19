@@ -1,21 +1,21 @@
 {
-  "name": "@qmi/api",
+  "name": "@qmi/market-data",
   "version": "0.0.0",
   "private": true,
-  "description": "QMI API gateway / auth / orchestration (Phase 1: health check, market/latest, live SSE stream)",
+  "description": "Exchange adapters and WebSocket ingestion behind a common interface (Phase 1: Binance spot, BTC/ETH)",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "start": "node dist/server.js",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "lint": "eslint ."
+    "lint": "eslint . --ext .ts"
   },
   "dependencies": {
     "@qmi/config": "workspace:*",
+    "@qmi/contracts": "workspace:*",
     "@qmi/observability": "workspace:*",
-    "fastify": "^5.1.0",
     "pg": "^8.13.1",
     "redis": "^4.7.0"
   },
