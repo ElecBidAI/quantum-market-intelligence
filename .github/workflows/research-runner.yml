@@ -1,0 +1,38 @@
+name: Run backtester research runner
+
+# Genuinely free replacement for a Render Cron Job — see run-pipeline.yml's
+# comment for the full rationale and the DATABASE_URL secret requirement
+# (the *external* connection string for qmi-postgres, not the private one
+# render.yaml wires up for qmi-api).
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  research-runner:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python packages
+        run: |
+          pip install -e packages/quant-core \
+                      -e services/feature-engine \
+                      -e services/risk-engine \
+                      -e services/backtester \
+                      -e services/simulation-engine \
+                      -e services/regime-engine \
+                      -e services/strategy-engine \
+                      -e services/paper-execution \
+                      -e services/ai-council
+
+      - name: Run research runner
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python -m backtester.research_runner

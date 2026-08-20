@@ -1,117 +1,130 @@
-# Deploying QMI to Render
+# Deploying QMI to Render — free tier only
 
-Deploys every service in `render.yaml` as a
-[Render Blueprint](https://render.com/docs/blueprint-spec). This was written
-and reviewed against Render's current documented Blueprint schema, but has
-not been applied against a real Render account — the first real deploy will
-likely surface one or two things to fix. Treat this as a strong starting
-point, not a guarantee.
+Deploys `render.yaml` as a [Render Blueprint](https://render.com/docs/blueprint-spec).
+**Nothing in this file requires a card.** This was written and tested
+against a real Render account this same session — a couple of things
+failed on the first real attempt and got fixed in place; see the git
+history on `render.yaml` and these `.github/workflows/` files for exactly
+what broke and why, if that's useful context later.
 
-## Why Postgres is self-hosted, not Render's managed product
+## What's covered, and what isn't
 
-Every migration in `data/migrations/` depends on the TimescaleDB extension
-(`CREATE EXTENSION timescaledb`, `create_hypertable(...)` on `market_ticks`,
-`ohlcv`, `orderbook_snapshots`, `features`, `funding_rates`,
-`futures_basis`). Render's managed Postgres product doesn't support that
-extension. `render.yaml` instead runs the exact same
-`timescale/timescaledb:latest-pg16` image `docker-compose.yml` already uses
-locally, as a private service (`qmi-postgres`) with its own persistent
-disk — not reachable from the public internet, only from the other services
-in this Blueprint.
+| Piece | Where it runs | Cost |
+| --- | --- | --- |
+| `qmi-postgres` (Postgres) | Render, managed, free plan | $0 (1GB, **expires 30 days after creation** — see below) |
+| `qmi-redis` (Redis-compatible) | Render, managed, free plan | $0 (in-memory only, lost on restart — fine, it's only a pub/sub relay) |
+| `qmi-api` (Fastify gateway) | Render, free web service | $0 (spins down after ~15 min idle, wakes in a few seconds) |
+| `qmi-web` (Next.js dashboard) | Render, free web service | $0 (same spin-down behavior) |
+| `ai_council.run_pipeline` | GitHub Actions, scheduled | $0 (Render Cron Jobs have no free tier at all; this replaces that) |
+| `backtester.research_runner` | GitHub Actions, scheduled | $0 (same) |
+| `services/market-data` (exchange ingestion) | **Not deployed anywhere** | — |
+
+**The one real gap**: `services/market-data` needs to run *continuously*
+(a live Binance WebSocket connection), and Render has no free tier at all
+for Background Workers — only Web Services, Key Value, and Postgres have
+one. There's no genuinely free way to keep this specific piece running
+24/7 on Render. For now, run it locally when you want fresh data flowing
+into the deployed database (`DATABASE_URL` pointed at `qmi-postgres`'s
+*external* connection string — see below), the same way this project has
+been doing all along. Revisit paying for just this one service later if
+continuous ingestion matters enough — it'd be the cheapest single line
+item to add back (a Background Worker on Render's "starter" plan), not
+the whole original four-service, ~$30+/month version.
+
+**Why this is possible now**: `data/migrations/` no longer uses the
+TimescaleDB extension. It only ever used it for hypertables (automatic
+time-based partitioning) — real, but irrelevant at anything close to this
+project's current data volume, and Render's free managed Postgres doesn't
+support that extension. Removing it was a pure downgrade of "how this
+scales at serious volume," not a functional change today.
 
 ## 1. Push to GitHub
-
-Render deploys from a GitHub (or GitLab) repo. If this repo isn't pushed
-yet:
 
 ```
 git remote add origin <your-repo-url>
 git push -u origin master
 ```
 
-## 2. Create a Render account and apply the Blueprint
+## 2. Apply the Blueprint
 
-1. Sign up at [render.com](https://render.com) (free).
+1. Sign up at [render.com](https://render.com) (free — no card at signup).
 2. Dashboard -> **New** -> **Blueprint**.
-3. Connect your GitHub account and select this repo. Render reads
-   `render.yaml` from the repo root automatically.
-4. Review the seven services it proposes (`qmi-postgres`, `qmi-redis`,
-   `qmi-api`, `qmi-web`, `qmi-market-data`, `qmi-run-pipeline`,
-   `qmi-research-runner`) and click **Apply**.
+3. Connect GitHub, select this repo. Render reads `render.yaml`
+   automatically and proposes `qmi-postgres`, `qmi-redis`, `qmi-api`,
+   `qmi-web`.
+4. Give the Blueprint a name, review, **Deploy Blueprint**.
 
-`render.yaml` already uses Render's free plan everywhere Render actually
-offers one: `qmi-api`, `qmi-web` (free web services — spin down after
-~15 minutes idle, wake in a few seconds on the next request) and
-`qmi-redis` (free Key Value — in-memory only, fine here since it's only a
-pub/sub relay, nothing persisted).
+If a service fails to even get *created* (not just fail its build), check
+that YAML block for a stray/incorrect field before assuming it's a code
+problem — that happened twice this session (`fromService` needing a
+`type` field; a `--` accidentally forwarded to `next start` by `pnpm run
+... -- ...`, which pnpm doesn't need at all, unlike npm). A service stuck
+on Render's generic "waking up" splash forever, rather than resolving,
+usually means it was never actually built/deployed — check its **Deploys**
+tab for "This service doesn't have any deploys yet" before assuming it's
+just cold-starting.
 
-**Render has no free tier at all for the other four** — `qmi-postgres`
-(private service + disk), `qmi-market-data` (background worker),
-`qmi-run-pipeline`, `qmi-research-runner` (cron jobs). Applying this
-Blueprint will ask for a card before creating those, and each costs money
-every month on Render's cheapest ("starter") plan regardless of how little
-it's used (confirm current pricing in Render's dashboard/billing page
-before applying — it changes). There's no way around this for
-`qmi-postgres` specifically: it needs the TimescaleDB extension, which
-only exists on a paid, self-hosted instance here, never on Render's free
-managed Postgres.
+## 3. Apply the database schema
 
-## 3. Wire up DATABASE_URL manually
+Render's managed Postgres starts empty — nothing runs the migrations for
+you automatically. From your own machine (with this repo's Python deps
+installed, same as local dev):
 
-Because `qmi-postgres` is a self-hosted private service, Render has no
-built-in way to hand its connection string to the other services (that
-auto-wiring only exists for Render's own managed database products) — this
-is the one manual step:
+1. Render dashboard -> `qmi-postgres` -> **Connect** -> copy the
+   **External Database URL** (not the internal one — your machine isn't
+   on Render's private network).
+2. Run:
+   ```
+   DATABASE_URL="<external URL>" python data/apply_migrations.py
+   ```
+   This applies every file in `data/migrations/` in order and records each
+   one in a `schema_migrations` table it creates — safe to re-run later
+   for a newly-added migration too, since it skips whatever's already
+   recorded there (several individual migration files are *not*
+   idempotent on their own — e.g. a plain `RENAME COLUMN` — so this
+   tracking is what actually makes re-running safe, not the migrations
+   themselves).
 
-1. Open the `qmi-postgres` service in Render's dashboard. Note its internal
-   hostname (shown on the service's **Connect** tab) and the
-   auto-generated `POSTGRES_PASSWORD` value (under **Environment**).
-2. Build the connection string:
-   `postgresql://qmi:<password>@<qmi-postgres-internal-host>:5432/qmi`
-3. Paste that exact value into `DATABASE_URL` for **each** of: `qmi-api`,
-   `qmi-market-data`, `qmi-run-pipeline`, `qmi-research-runner` (their
-   **Environment** tabs — `render.yaml` deliberately left these as
-   `sync: false` placeholders for this reason).
-4. Save. Render redeploys `qmi-api`/`qmi-market-data` automatically; for
-   the two cron jobs, the new value takes effect on their next scheduled
-   (or manually triggered) run.
+## 4. Set the GitHub Actions secret
 
-## 4. Verify
+`.github/workflows/run-pipeline.yml` and `research-runner.yml` both need
+a repo secret:
 
-- `qmi-postgres`'s **Logs** tab should show each `data/migrations/000N_*.sql`
-  file being applied during its very first boot (the official Postgres
-  image only runs `/docker-entrypoint-initdb.d` once, against an empty
-  data directory — see `deploy/postgres/Dockerfile`'s comment).
-- `https://qmi-api.onrender.com/health` should return
-  `{"status":"ok",...}`.
-- `https://qmi-web.onrender.com` should load, and registering an account
-  should work end to end.
-- `qmi-market-data`'s logs should show it connecting to Binance's public
-  streams and writing bars.
-- Manually trigger `qmi-run-pipeline` and `qmi-research-runner` once each
-  from their dashboard pages rather than waiting for their schedules.
+1. GitHub repo -> **Settings** -> **Secrets and variables** -> **Actions**
+   -> **New repository secret**.
+2. Name: `DATABASE_URL`. Value: the same *external* connection string from
+   step 3 (GitHub's runners aren't on Render's private network either).
 
-**Data-volume reality carries over from local dev**: `qmi-research-runner`
-needs real accumulated OHLCV history to produce anything meaningful (the
-regime classifier alone needs 50+ real 1-minute bars) — right after first
-deploy, `qmi-market-data` needs to run for a while before the cron jobs
-have anything real to work with. This is inherent to the design (see
-`services/backtester/src/backtester/research_runner.py`'s module
-docstring), not a deployment bug.
+Both workflows also have `workflow_dispatch:` enabled — trigger them
+manually once from the repo's **Actions** tab rather than waiting for
+their schedule, to confirm they work before relying on the cron trigger.
 
-## Applying a new migration after the first deploy
+## 5. Verify
 
-`/docker-entrypoint-initdb.d` only runs on a truly empty data directory, so
-a migration added *after* `qmi-postgres`'s first boot won't run
-automatically. Open a **Shell** on any Python service in this Blueprint
-(they already have `psycopg` installed) and run:
+- `https://qmi-api.onrender.com/health` -> `{"status":"ok",...}`.
+- `https://qmi-web.onrender.com` loads, and registering an account works
+  end to end (this needs step 3 done first — without it, `qmi-api` boots
+  fine but doesn't register the DB-backed routes at all, and registration
+  fails with a generic error, not a crash).
+- Run `services/market-data` locally against the deployed database
+  (`DATABASE_URL` = the external Postgres URL, `REDIS_URL` = `qmi-redis`'s
+  external connection string from its own **Connect** tab) to get real
+  bars flowing, then manually trigger both GitHub Actions workflows once.
 
-```python
-python - <<'EOF'
-import os, psycopg
-with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
-    with conn.cursor() as cur:
-        cur.execute(open("data/migrations/00XX_new_migration.sql").read())
-    conn.commit()
-EOF
-```
+**Data-volume reality carries over from local dev**: the regime
+classifier needs 50+ real 1-minute bars before it can produce anything,
+so `research_runner` won't have a meaningful backtest until
+`services/market-data` has been feeding it for a while. Not a deployment
+bug — see `services/backtester/src/backtester/research_runner.py`'s
+module docstring.
+
+## The 30-day free Postgres expiry
+
+Render's free Postgres plan is deleted 30 days after creation, full stop
+— there's no free renewal. Before that happens: either upgrade
+`qmi-postgres` to a paid plan in Render's dashboard (a few dollars/month,
+much cheaper than the four-service version this replaced), or export the
+data (`pg_dump` against the external URL) and recreate the database +
+re-run `data/apply_migrations.py` + re-run `pg_dump`'s output against the
+new instance. Set a reminder — Render does not warn you before deleting
+it.

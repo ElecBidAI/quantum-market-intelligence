@@ -5,9 +5,11 @@
 -- rather than in 0001_init.sql because this is the phase that first reads
 -- and writes these tables (see DATA-CONTRACTS.md Section 9).
 --
--- All timestamps are TIMESTAMPTZ, written in UTC. TimescaleDB hypertables
--- are used for the append-only, time-ordered tables so ingestion volume can
--- grow without a schema change.
+-- All timestamps are TIMESTAMPTZ, written in UTC. Plain indexed tables, not
+-- TimescaleDB hypertables — this deployment target doesn't have the
+-- extension available (see docs/deployment/RENDER-DEPLOYMENT.md). Revisit
+-- if/when ingestion volume actually makes automatic time-based
+-- partitioning worth the operational cost of a self-managed database.
 
 -- Trade / tick (DATA-CONTRACTS.md Section 3.1).
 CREATE TABLE IF NOT EXISTS market_ticks (
@@ -25,7 +27,6 @@ CREATE TABLE IF NOT EXISTS market_ticks (
     PRIMARY KEY (exchange, symbol, trade_id, "timestamp")
 );
 
-SELECT create_hypertable('market_ticks', by_range('timestamp'), if_not_exists => TRUE);
 CREATE INDEX IF NOT EXISTS idx_market_ticks_symbol_time ON market_ticks (symbol, "timestamp" DESC);
 
 -- OHLCV bar (DATA-CONTRACTS.md Section 3.2). Only closed bars are inserted;
@@ -47,7 +48,6 @@ CREATE TABLE IF NOT EXISTS ohlcv (
     PRIMARY KEY (exchange, symbol, interval, "timestamp")
 );
 
-SELECT create_hypertable('ohlcv', by_range('timestamp'), if_not_exists => TRUE);
 CREATE INDEX IF NOT EXISTS idx_ohlcv_symbol_interval_time ON ohlcv (symbol, interval, "timestamp" DESC);
 
 -- Order-book snapshot (DATA-CONTRACTS.md Section 3.4). Phase 1 ingests
@@ -69,5 +69,4 @@ CREATE TABLE IF NOT EXISTS orderbook_snapshots (
     PRIMARY KEY (exchange, symbol, sequence_id, "timestamp")
 );
 
-SELECT create_hypertable('orderbook_snapshots', by_range('timestamp'), if_not_exists => TRUE);
 CREATE INDEX IF NOT EXISTS idx_orderbook_snapshots_symbol_time ON orderbook_snapshots (symbol, "timestamp" DESC);

@@ -16,6 +16,5 @@ CREATE TABLE IF NOT EXISTS features (
     PRIMARY KEY (symbol, interval, feature_set, "timestamp")
 );
 
-SELECT create_hypertable('features', by_range('timestamp'), if_not_exists => TRUE);
 CREATE INDEX IF NOT EXISTS idx_features_symbol_interval_time
     ON features (symbol, interval, "timestamp" DESC);

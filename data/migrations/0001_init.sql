@@ -7,8 +7,6 @@
 --
 -- All timestamps are stored as TIMESTAMPTZ and must be written in UTC.
 
-CREATE EXTENSION IF NOT EXISTS timescaledb;
-
 -- Strategy candidates proposed by strategy-engine (or any future producer).
 -- A row here is never an executable order (see docs/risk/RISK-GOVERNANCE.md).
 CREATE TABLE IF NOT EXISTS signals (

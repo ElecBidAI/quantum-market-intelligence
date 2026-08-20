@@ -1,0 +1,46 @@
+name: Run AI Council pipeline
+
+# Genuinely free replacement for a Render Cron Job (Render has no free
+# tier for Cron Jobs at all — see render.yaml's header comment). Requires
+# a repo secret named DATABASE_URL: the *external* connection string for
+# qmi-postgres (Render dashboard -> qmi-postgres -> Connect -> External
+# Database URL) — GitHub's runners aren't on Render's private network, so
+# the private `connectionString` render.yaml wires up for qmi-api won't
+# reach it from here.
+#
+# GitHub disables scheduled workflows automatically after 60 days with no
+# commits to the repo, and doesn't guarantee the schedule fires at the
+# exact minute under load — acceptable for this, not a substitute for a
+# real always-on scheduler if that's ever needed.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python packages
+        run: |
+          pip install -e packages/quant-core \
+                      -e services/feature-engine \
+                      -e services/risk-engine \
+                      -e services/backtester \
+                      -e services/simulation-engine \
+                      -e services/regime-engine \
+                      -e services/strategy-engine \
+                      -e services/paper-execution \
+                      -e services/ai-council
+
+      - name: Run pipeline
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python -m ai_council.run_pipeline

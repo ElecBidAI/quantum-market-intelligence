@@ -25,7 +25,6 @@ CREATE TABLE IF NOT EXISTS funding_rates (
     PRIMARY KEY (exchange, symbol, "timestamp")
 );
 
-SELECT create_hypertable('funding_rates', by_range('timestamp'), if_not_exists => TRUE);
 CREATE INDEX IF NOT EXISTS idx_funding_rates_symbol_time ON funding_rates (symbol, "timestamp" DESC);
 
 -- Futures-vs-index basis, sampled once per markPrice tick (~1s). Perpetuals
@@ -47,5 +46,4 @@ CREATE TABLE IF NOT EXISTS futures_basis (
     PRIMARY KEY (exchange, symbol, "timestamp")
 );
 
-SELECT create_hypertable('futures_basis', by_range('timestamp'), if_not_exists => TRUE);
 CREATE INDEX IF NOT EXISTS idx_futures_basis_symbol_time ON futures_basis (symbol, "timestamp" DESC);

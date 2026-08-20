@@ -1,17 +1,35 @@
 # Render Blueprint (https://render.com/docs/blueprint-spec). Apply from the
-# Render dashboard: New -> Blueprint -> select this repo. Every service maps
-# 1:1 onto how this repo already describes itself running (see each
-# service's own README / module docstring for the "why").
+# Render dashboard: New -> Blueprint -> select this repo.
 #
-# TEMPORARILY TRIMMED TO THE THREE FREE-TIER SERVICES (qmi-api, qmi-web,
-# qmi-redis) so the very first Blueprint apply doesn't force a card into
-# Render before we've confirmed the mechanics work at all. apps/api and
-# apps/web both run fine with no database configured (see server.ts: /auth,
-# /market, etc. simply aren't registered without DATABASE_URL — only
-# /health is guaranteed). The four paid-only services (qmi-postgres,
-# qmi-market-data, qmi-run-pipeline, qmi-research-runner) are commented out
-# below, in full, ready to uncomment once you've decided to add a card —
-# see docs/deployment/RENDER-DEPLOYMENT.md.
+# EVERYTHING HERE IS FREE — no card required anywhere in this file.
+# `data/migrations/` no longer depends on the TimescaleDB extension (it
+# only ever used it for hypertables — automatic time-based partitioning,
+# irrelevant at this data volume; removed rather than paying to self-host
+# Postgres just to get an extension nothing actually needs yet). That
+# unlocks Render's own free managed Postgres, which doesn't support
+# TimescaleDB but works fine for plain tables.
+#
+# What's covered here: qmi-postgres (free managed Postgres), qmi-redis
+# (free Key Value), qmi-api, qmi-web (free web services).
+#
+# What's NOT covered here, and why:
+# - services/market-data (the exchange-ingestion worker) needs to run
+#   continuously, and Render has no free tier at all for Background
+#   Workers — only Web Services, Key Value, and (as of this file) Postgres
+#   have one. There's no way to run this specific piece for $0 on Render.
+#   Run it locally when you want fresh data (as this project has been
+#   doing), or revisit paying for just this one service later — see
+#   docs/deployment/RENDER-DEPLOYMENT.md.
+# - The two Python batch jobs (ai_council.run_pipeline,
+#   backtester.research_runner) moved to GitHub Actions scheduled
+#   workflows instead of Render Cron Jobs (which also have no free tier)
+#   — see .github/workflows/.
+
+databases:
+  - name: qmi-postgres
+    plan: free # 1GB, expires 30 days after creation on Render's free tier — see the deployment doc
+    databaseName: qmi
+    user: qmi
 
 services:
   - type: keyvalue
@@ -51,8 +69,10 @@ services:
           name: qmi-redis
           type: keyvalue
           property: connectionString
-      # DATABASE_URL deliberately absent for now — see the header comment.
-      # Add it back (sync: false) once qmi-postgres exists.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: qmi-postgres
+          property: connectionString
       # Unset on purpose: apps/api simply doesn't register SSO routes
       # without it (see packages/config). Add it manually if/when SSO is
       # actually wanted: openssl rand -base64 32.
@@ -68,90 +88,12 @@ services:
     buildCommand: npx pnpm@11.13.1 install --frozen-lockfile && npx pnpm@11.13.1 run build:packages && npx pnpm@11.13.1 --filter @qmi/web run build
     # `next start` reads Render's $PORT natively (its -p/--port option
     # defaults to env: PORT — confirmed in Next's own CLI docs), so no
-    # extra flag is needed. A previous `-- -p $PORT` here was actively
-    # wrong: pnpm forwards extra args to the underlying script without
-    # needing `--` at all (unlike npm), so pnpm passed the literal "--"
-    # straight to `next start`, which parsed it as the app directory
-    # argument and crashed with "Invalid project directory provided".
-    # NEXT_PUBLIC_API_URL is inlined at *build* time (see next.config.mjs),
-    # so it must already be set above, not just at runtime.
+    # extra flag is needed. NEXT_PUBLIC_API_URL is inlined at *build* time
+    # (see next.config.mjs), so it must already be set above, not just at
+    # runtime.
     startCommand: npx pnpm@11.13.1 --filter @qmi/web run start
     envVars:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_URL
         value: https://qmi-api.onrender.com
-
-  # --- Everything below needs a card on file (no free tier on Render for
-  # private services, background workers, or cron jobs) — commented out
-  # until that's a deliberate choice. Uncomment all of it together.
-
-  # - type: pserv
-  #   name: qmi-postgres
-  #   runtime: docker
-  #   plan: starter
-  #   dockerfilePath: ./deploy/postgres/Dockerfile
-  #   dockerContext: .
-  #   disk:
-  #     name: qmi-postgres-data
-  #     mountPath: /var/lib/postgresql/data
-  #     sizeGB: 1
-  #   envVars:
-  #     - key: POSTGRES_DB
-  #       value: qmi
-  #     - key: POSTGRES_USER
-  #       value: qmi
-  #     - key: POSTGRES_PASSWORD
-  #       generateValue: true
-  #
-  # --- services/market-data: exchange ingestion (long-running, not a web server) ---
-  #
-  # - type: worker
-  #   name: qmi-market-data
-  #   runtime: node
-  #   plan: starter
-  #   buildCommand: npx pnpm@11.13.1 install --frozen-lockfile && npx pnpm@11.13.1 run build:packages && npx pnpm@11.13.1 --filter @qmi/market-data run build
-  #   startCommand: npx pnpm@11.13.1 --filter @qmi/market-data run start
-  #   envVars:
-  #     - key: NODE_ENV
-  #       value: production
-  #     - key: DATABASE_URL
-  #       sync: false
-  #     - key: REDIS_URL
-  #       fromService:
-  #         name: qmi-redis
-  #         type: keyvalue
-  #         property: connectionString
-  #
-  # --- Python batch jobs: deliberately one-shot scripts (see each
-  # module's own docstring), scheduled here rather than run as daemons. ---
-  #
-  # - type: cron
-  #   name: qmi-run-pipeline
-  #   runtime: python
-  #   plan: starter
-  #   schedule: "*/15 * * * *"
-  #   buildCommand: >-
-  #     pip install -e packages/quant-core -e services/feature-engine
-  #     -e services/risk-engine -e services/backtester -e services/simulation-engine
-  #     -e services/regime-engine -e services/strategy-engine -e services/paper-execution
-  #     -e services/ai-council
-  #   startCommand: python -m ai_council.run_pipeline
-  #   envVars:
-  #     - key: DATABASE_URL
-  #       sync: false
-  #
-  # - type: cron
-  #   name: qmi-research-runner
-  #   runtime: python
-  #   plan: starter
-  #   schedule: "0 * * * *"
-  #   buildCommand: >-
-  #     pip install -e packages/quant-core -e services/feature-engine
-  #     -e services/risk-engine -e services/backtester -e services/simulation-engine
-  #     -e services/regime-engine -e services/strategy-engine -e services/paper-execution
-  #     -e services/ai-council
-  #   startCommand: python -m backtester.research_runner
-  #   envVars:
-  #     - key: DATABASE_URL
-  #       sync: false
