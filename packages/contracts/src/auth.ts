@@ -59,16 +59,27 @@ export type SsoConnection = z.infer<typeof ssoConnection>;
  * Gate-able capabilities. Adding the next feature is a matter of extending
  * this union and `ENTITLEMENTS` below, not building a new mechanism.
  */
-export type Feature = "market-data:read" | "council-narrative:read";
+export type Feature =
+  | "market-data:read"
+  | "council-narrative:read"
+  | "strategy-signals:read"
+  | "paper-trading:read";
 
 /**
- * Plan -> feature map. All three plans currently grant both features
+ * Plan -> feature map. All three plans currently grant every feature
  * (nothing to differentiate on yet); this map is still the single source
  * of truth `apps/api`'s `requireEntitlement` reads, so introducing a
  * plan-gated feature later is a one-line edit here, not a new code path.
  */
+const ALL_FEATURES: Feature[] = [
+  "market-data:read",
+  "council-narrative:read",
+  "strategy-signals:read",
+  "paper-trading:read",
+];
+
 export const ENTITLEMENTS: Record<Plan, ReadonlySet<Feature>> = {
-  free: new Set(["market-data:read", "council-narrative:read"]),
-  pro: new Set(["market-data:read", "council-narrative:read"]),
-  enterprise: new Set(["market-data:read", "council-narrative:read"]),
+  free: new Set(ALL_FEATURES),
+  pro: new Set(ALL_FEATURES),
+  enterprise: new Set(ALL_FEATURES),
 };

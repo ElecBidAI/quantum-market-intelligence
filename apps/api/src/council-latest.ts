@@ -31,7 +31,7 @@ export interface CouncilNarrative {
 /**
  * Reads the most recent broker narrative per symbol
  * (data/migrations/0009_council_narratives.sql, written by
- * `python -m ai_council.run_narrative`). Read-only, same
+ * `python -m ai_council.run_pipeline`). Read-only, same
  * one-query-per-symbol shape as `getLatestMarketState` — a symbol with no
  * narrative yet (the batch job hasn't run) simply isn't in the result, not
  * a fabricated placeholder row.

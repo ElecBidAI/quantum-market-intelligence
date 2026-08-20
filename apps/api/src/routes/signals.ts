@@ -1,9 +1,9 @@
 import type { FastifyInstance, preHandlerHookHandler } from "fastify";
-import { getLatestCouncilNarratives } from "../council-latest.js";
+import { getLatestSignals } from "../signals-latest.js";
 import type { QueryablePool } from "../db.js";
 import { DEFAULT_SYMBOLS } from "./market.js";
 
-export interface CouncilRouteDeps {
+export interface SignalsRouteDeps {
   pool: QueryablePool;
 }
 
@@ -18,24 +18,22 @@ function parseSymbols(raw: unknown): string[] {
 
 /**
  * Registers:
- *   GET /council/narrative?symbols=BTC-USDT,ETH-USDT — the latest
- *     deterministic broker narrative per symbol
- *     (services/ai-council/src/ai_council/narrator.py, run by
- *     `python -m ai_council.run_pipeline`). A symbol with no narrative
- *     yet is simply absent from the response.
+ *   GET /signals/latest?symbols=BTC-USDT,ETH-USDT — the latest strategy
+ *     candidate + its risk decision per symbol (`signals`/`risk_decisions`,
+ *     written by `python -m ai_council.run_pipeline`). Structured data —
+ *     complements /council/narrative's prose, doesn't duplicate it.
  *
  * Requires `preHandler` (an authenticated session with the
- * `council-narrative:read` entitlement — built by app.ts, same pattern as
- * routes/market.ts).
+ * `strategy-signals:read` entitlement — built by app.ts).
  */
-export function registerCouncilRoutes(
+export function registerSignalsRoutes(
   app: FastifyInstance,
-  deps: CouncilRouteDeps,
+  deps: SignalsRouteDeps,
   preHandler: preHandlerHookHandler[],
 ): void {
-  app.get("/council/narrative", { preHandler }, async (request) => {
+  app.get("/signals/latest", { preHandler }, async (request) => {
     const symbols = parseSymbols((request.query as Record<string, unknown>).symbols);
-    const narratives = await getLatestCouncilNarratives(deps.pool, symbols);
-    return { narratives };
+    const signals = await getLatestSignals(deps.pool, symbols);
+    return { signals };
   });
 }

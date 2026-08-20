@@ -2,9 +2,12 @@
 
 import AuthGate from "./AuthGate";
 import BrokerNarrativeCard from "./BrokerNarrativeCard";
+import DerivativesCard from "./DerivativesCard";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useLocale } from "./LocaleProvider";
 import MarketDashboard from "./MarketDashboard";
+import PaperTradingCard from "./PaperTradingCard";
+import SignalsCard from "./SignalsCard";
 
 export default function HomePage() {
   const { t } = useLocale();
@@ -22,7 +25,10 @@ export default function HomePage() {
       </p>
       <AuthGate>
         <MarketDashboard />
+        <DerivativesCard />
         <BrokerNarrativeCard />
+        <SignalsCard />
+        <PaperTradingCard />
       </AuthGate>
     </main>
   );

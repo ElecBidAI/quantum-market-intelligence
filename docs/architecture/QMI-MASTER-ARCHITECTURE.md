@@ -146,16 +146,24 @@ why). Options (Greeks, IV, smile/skew) are out of scope per the brief's own
 things were added: **Access & Licensing** (see
 [`docs/architecture/ACCESS-AND-LICENSING.md`](ACCESS-AND-LICENSING.md)) —
 user accounts, opaque-token sessions, plan-based feature entitlements, and
-OIDC SSO in front of `apps/api` — and a **broker narrative** feature:
-`ai_council.narrator` (deterministic, template-based, never LLM-generated)
-turns the pipeline's structured output into plain-language prose, and
-`ai_council.run_narrative` is the first batch job that runs
+OIDC SSO in front of `apps/api` — and a **broker narrative + pipeline**
+feature: `ai_council.narrator` (deterministic, template-based, never
+LLM-generated, bilingual EN/ES) turns the pipeline's structured output
+into plain-language prose, and `ai_council.run_pipeline` (renamed from
+`run_narrative` — its scope grew) is the first batch job that runs
 regime→strategy→risk→council against real Postgres-ingested bars,
-persisting to `council_narratives` (`data/migrations/0009_council_narratives.sql`),
-read by `apps/api`'s `GET /council/narrative` and shown on the dashboard —
-see `services/ai-council/README.md`'s Narrator section and Section 6 below.
-All other directories still exist only as placeholders (`README.md` stubs)
-to fix the intended structure without pretending the functionality exists.
+persisting to `council_narratives` (`data/migrations/0009`/`0010`),
+`signals`/`risk_decisions` (`0001_init.sql`), and — the first time
+`paper_execution` has ever run against this real chain rather than only
+its own test's synthetic fixtures — `paper_orders`/`fills`/
+`portfolio_snapshots` (`0006_paper_execution.sql`). All of it is read by
+new `apps/api` routes (`GET /council/narrative`, `/signals/latest`,
+`/paper-trading/latest`, plus `/derivatives/latest` over the
+already-ingested `funding_rates`/`futures_basis` tables) and shown on the
+dashboard — see `services/ai-council/README.md`'s Pipeline section and
+Section 6 below. All other directories still exist only as placeholders
+(`README.md` stubs) to fix the intended structure without pretending the
+functionality exists.
 
 ## 4. Stack decisions
 
@@ -222,24 +230,35 @@ Exchange WS/REST
 ```
 
 What's real as of Phase 9 plus the post-Phase-9 Access & Licensing and
-broker-narrative work, and what isn't:
+broker-narrative/pipeline work, and what isn't:
 
 - **Real, end to end, against real Postgres-ingested bars (not just synthetic
-  fixtures)**: `services/ai-council/src/ai_council/run_narrative.py` (batch job,
-  `python -m ai_council.run_narrative`) runs market-data's real ingested OHLCV
-  through regime-engine → strategy-engine → risk-engine → ai-council →
-  `narrator.py`'s deterministic broker narrative, and persists one row per symbol
-  to `council_narratives`. `apps/api`'s `GET /council/narrative` (auth + entitlement
-  gated) reads the latest row per symbol for `apps/web`'s dashboard. This is the
-  first thing in the repository that chains the full pipeline against real
-  ingested data rather than only synthetic fixtures — still batch, not scheduled
-  by anything in this repo (cron/systemd timer, same as `feature-engine`), and
-  still not a decision authority: the narrative restates `risk_engine`/`ai_council`
-  output, it never influences it (see `services/ai-council/README.md`'s Narrator
-  section).
-- **Real, end to end, but only against synthetic/in-process bars**: market-data →
-  persistence → feature-engine → regime-engine → strategy-engine → risk-engine →
-  paper-execution, with ai-council analyzing alongside (not inside) that chain.
+  fixtures)**: `services/ai-council/src/ai_council/run_pipeline.py` (batch job,
+  `python -m ai_council.run_pipeline`, renamed from `run_narrative.py`) runs
+  market-data's real ingested OHLCV through regime-engine → strategy-engine →
+  risk-engine → ai-council → `narrator.py`'s deterministic bilingual broker
+  narrative, **and**, when the decision is APPROVE/REDUCE, through
+  paper-execution's `create_order_from_decision` → `FillSimulator` →
+  `PositionBook` — the first time paper-execution has run against this real
+  chain rather than only its own test's synthetic fixtures. It persists to
+  `signals`/`risk_decisions`, `council_narratives`, and `paper_orders`/`fills`/
+  `portfolio_snapshots` every run; positions are replayed from the `fills`
+  ledger each time, never carried in memory between runs. New `apps/api` routes
+  (`GET /council/narrative`, `/signals/latest`, `/paper-trading/latest`, and
+  `/derivatives/latest` over already-ingested funding-rate/basis data — all
+  auth + entitlement gated) read the latest rows for `apps/web`'s dashboard.
+  This is the first thing in the repository that chains the full pipeline
+  against real ingested data rather than only synthetic fixtures — still
+  batch, not scheduled by anything in this repo (cron/systemd timer, same as
+  `feature-engine`), and still not a decision authority: everything here
+  restates or executes on `risk_engine`/`ai_council` output, never influences
+  it (see `services/ai-council/README.md`'s Pipeline section — including its
+  documented paper-order de-duplication limitation).
+- **Real, end to end, but only against synthetic/in-process bars (still true
+  for the isolated integration tests, independent of `run_pipeline.py`
+  above)**: market-data → persistence → feature-engine → regime-engine →
+  strategy-engine → risk-engine → paper-execution, with ai-council analyzing
+  alongside (not inside) that chain.
   `services/paper-execution/tests/test_integration.py` and
   `services/ai-council/tests/test_integration.py` run this — bars, regime,
   candidate, risk decision, paper order, simulated fill, position, council
@@ -253,15 +272,17 @@ broker-narrative work, and what isn't:
   Trader, Market Structure, Macro, On-Chain, Derivatives, Portfolio, and
   Security/Fraud agents are deferred — see that service's README for why each one
   specifically.
-- **Not real**: nothing runs the strategy→risk→paper-execution→council chain (the
-  paper-execution one, distinct from the narrator's read-only chain above) on a
-  schedule against live-ingested market data — it's a callable pipeline, not a
-  daemon. portfolio-engine exists only as formulas (`quant_core.portfolio`), not a
-  service that sizes an approved candidate before it reaches paper-execution.
-  Derivatives (Phase 9) are ingestion and analytics only — funding rate and basis
-  feed nothing downstream yet (no strategy consumes them, no derivatives position
-  can be opened anywhere in this repository); open interest and liquidation events
-  aren't ingested at all.
+- **Not real**: nothing runs `run_pipeline.py`'s regime→strategy→risk→
+  paper-execution→council chain **on a schedule** against live-ingested market
+  data — it's a manually-triggered batch script, not a daemon, and (documented
+  in `services/ai-council/README.md`) it doesn't de-duplicate paper orders
+  against an already-open position, so running it unattended on a cadence
+  would need that fixed first. portfolio-engine exists only as formulas
+  (`quant_core.portfolio`), not a service that sizes an approved candidate
+  before it reaches paper-execution. Derivatives (Phase 9) are ingestion,
+  analytics, and now dashboard display only — funding rate and basis feed no
+  strategy and open no derivatives position anywhere in this repository; open
+  interest and liquidation events aren't ingested at all.
 
 ## 7. Observability
 

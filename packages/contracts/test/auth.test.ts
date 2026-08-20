@@ -83,4 +83,12 @@ describe("ENTITLEMENTS", () => {
   it.each(plan.options)("grants council-narrative:read to the %s plan", (planValue) => {
     expect(ENTITLEMENTS[planValue].has("council-narrative:read")).toBe(true);
   });
+
+  it.each(plan.options)("grants strategy-signals:read to the %s plan", (planValue) => {
+    expect(ENTITLEMENTS[planValue].has("strategy-signals:read")).toBe(true);
+  });
+
+  it.each(plan.options)("grants paper-trading:read to the %s plan", (planValue) => {
+    expect(ENTITLEMENTS[planValue].has("paper-trading:read")).toBe(true);
+  });
 });

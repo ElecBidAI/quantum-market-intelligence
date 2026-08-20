@@ -27,6 +27,9 @@ async function main(): Promise<void> {
       cookieOptions,
     };
     deps.council = { pool };
+    deps.derivatives = { pool };
+    deps.signals = { pool };
+    deps.paperTrading = { pool };
 
     if (env.AUTH_ENCRYPTION_KEY) {
       deps.sso = {

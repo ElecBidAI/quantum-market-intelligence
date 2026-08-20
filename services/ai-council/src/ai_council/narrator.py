@@ -19,7 +19,7 @@ decision, not a new source of trading authority — nothing in this module
 can place, size, or approve a trade.
 
 **Language (`language: "en" | "es"`)**: both renders come from the exact
-same inputs — `run_narrative.py` calls this function twice per symbol, once
+same inputs — `run_pipeline.py` calls this function twice per symbol, once
 per language, against one pipeline run, never re-deriving anything.
 `reason`/`finding` `detail` strings (e.g. `"position would be 5.00%, limit
 is 3.00%"`) are machine-generated numeric diagnostics from risk_engine/the

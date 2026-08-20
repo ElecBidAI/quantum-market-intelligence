@@ -1,6 +1,12 @@
 from datetime import UTC, datetime
 
-from ai_council.db import fetch_recent_ohlcv, insert_narrative
+from ai_council.db import (
+    fetch_all_fills,
+    fetch_recent_ohlcv,
+    insert_narrative,
+    insert_risk_decision,
+    insert_signal,
+)
 
 
 class FakeCursor:
@@ -101,3 +107,79 @@ def test_insert_narrative_no_candidate_branch_nulls_out_json_fields():
     assert params[10] is None  # candidate
     assert params[11] is None  # risk_decision
     assert params[12] is None  # opinions
+
+
+def test_insert_signal_issues_an_insert_with_expected_params():
+    cursor = FakeCursor()
+    candidate = {
+        "strategyId": "trend_following_sma_v1",
+        "symbol": "BTC-USDT",
+        "venue": "binance",
+        "direction": "LONG",
+        "horizon": "4h",
+        "signalStrength": 0.8,
+        "entryLogic": {"entryPrice": 100.0},
+        "invalidationLogic": {},
+        "stopLogic": {"stopPrice": 95.0},
+        "targetLogic": {"targetPrice": 110.0},
+        "expectedEdge": 0.05,
+        "estimatedCosts": 0.01,
+        "regime": "BULLISH_TREND",
+        "timestamp": "2026-08-19T00:00:00Z",
+    }
+    insert_signal(cursor, candidate)
+
+    query, params = cursor.executed[0]
+    assert "INSERT INTO signals" in query
+    assert params[0] == "trend_following_sma_v1"
+    assert params[1] == "BTC-USDT"
+    assert params[3] == "LONG"
+    assert '"entryPrice": 100.0' in params[6]
+    assert params[12] == "BULLISH_TREND"
+    assert params[13] == "2026-08-19T00:00:00Z"
+
+
+def test_insert_risk_decision_issues_an_insert_with_expected_params():
+    cursor = FakeCursor()
+    decision = {
+        "decision": "REDUCE",
+        "strategyId": "trend_following_sma_v1",
+        "reasons": [{"code": "MAX_POSITION", "detail": "capped"}],
+        "sizingAdjustment": 0.5,
+        "timestamp": "2026-08-19T00:00:00Z",
+    }
+    insert_risk_decision(cursor, decision, "BTC-USDT")
+
+    query, params = cursor.executed[0]
+    assert "INSERT INTO risk_decisions" in query
+    assert params[0] == "REDUCE"
+    assert params[1] == "trend_following_sma_v1"
+    assert params[2] == "BTC-USDT"
+    assert '"code": "MAX_POSITION"' in params[3]
+    assert params[4] == 0.5
+    assert params[5] == "2026-08-19T00:00:00Z"
+
+
+def test_fetch_all_fills_orders_ascending_and_builds_fill_objects():
+    rows = [
+        ("order-1", "BTC-USDT", "LONG", 0.02, 65000.0, datetime(2026, 8, 19, 0, 0, tzinfo=UTC)),
+        ("order-2", "ETH-USDT", "SHORT", 0.01, 3400.0, datetime(2026, 8, 19, 0, 1, tzinfo=UTC)),
+    ]
+    cursor = FakeCursor(rows)
+    fills = fetch_all_fills(cursor)
+
+    query, _ = cursor.executed[0]
+    assert "FROM fills" in query
+    assert "ORDER BY" in query
+
+    assert len(fills) == 2
+    assert fills[0].order_id == "order-1"
+    assert fills[0].symbol == "BTC-USDT"
+    assert fills[0].price == 65000.0
+    assert fills[0].timestamp == "2026-08-19T00:00:00+00:00"
+    assert fills[1].direction == "SHORT"
+
+
+def test_fetch_all_fills_empty_when_no_rows():
+    cursor = FakeCursor([])
+    assert fetch_all_fills(cursor) == []

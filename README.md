@@ -19,12 +19,14 @@ Advocate, Auditor) analyze the same evidence alongside the pipeline via
 5th agent — never executing anything themselves. Integration tests run the
 whole chain: bars → regime → candidate → risk decision → paper order → fill →
 position, with the council's synthesis checked alongside it. The
-strategy→risk→paper-execution chain itself still doesn't run on a schedule
-against live data (see
+strategy→risk→paper-execution chain doesn't run on a **schedule** against
+live data yet (see
 [`docs/architecture/QMI-MASTER-ARCHITECTURE.md`](docs/architecture/QMI-MASTER-ARCHITECTURE.md)
-Section 6 for exactly what's real vs. not), though a separate read-only
-narrative chain now does (see below). Live market data is real (Binance
-spot, BTC/ETH) but read-only: nothing in this repository can place a real order.
+Section 6 for exactly what's real vs. not), but a manually-triggered batch
+script now runs the whole thing — including paper-execution — against real
+ingested bars (see the pipeline paragraph below). Live market data is real
+(Binance spot, BTC/ETH) but read-only: nothing in this repository can place
+a real order.
 New in Phase 9: `services/market-data`'s `BinanceFuturesAdapter` ingests
 perpetual-futures funding rate and futures-vs-index basis, and
 `packages/quant-core.derivatives` adds funding/basis/leverage/liquidation
@@ -37,20 +39,25 @@ and OIDC enterprise SSO — see
 It gates who can call the platform; it has no bearing on the Risk Engine's
 authority over trading decisions.
 
-Also new: a **broker narrative** feature. `ai_council.narrator` (deterministic,
-template-based prose, never LLM-generated) explains the pipeline's existing
-regime/candidate/risk/council output in plain language, always ending with a
-fixed disclaimer (paper/simulated account, not investment advice, no capital
-at risk) — even on a hard `REJECT`. `python -m ai_council.run_narrative` is a
-batch job (not scheduled by anything in this repo yet) that runs the full
-chain against real ingested bars and persists one narrative per symbol,
-readable via `apps/api`'s `GET /council/narrative` and shown on the
-dashboard. It runs strictly after `risk_engine`/`ai_council` have already
-decided — it explains a decision, it never makes one. Every narrative is
-generated in **English and Spanish** from the same pipeline run, and
-`apps/web` has an ES/EN language selector (UI chrome + narrative text; only
-the machine-generated `reason`/`finding` detail strings stay in English in
-both). See `services/ai-council/README.md`'s Narrator section.
+Also new: a **broker narrative + pipeline** feature. `ai_council.narrator`
+(deterministic, template-based prose, never LLM-generated) explains the
+pipeline's regime/candidate/risk/council output in plain language, always
+ending with a fixed disclaimer (paper/simulated account, not investment
+advice, no capital at risk) — even on a hard `REJECT`.
+`python -m ai_council.run_pipeline` (renamed from `run_narrative` — its
+scope grew) is a batch job (not scheduled by anything in this repo yet)
+that runs the full chain — regime → strategy → risk → council → narrator,
+and, when the decision is APPROVE/REDUCE, paper-execution too — against
+real ingested bars, persisting narratives, raw signals/risk decisions, and
+simulated paper orders/fills/portfolio snapshots. It runs strictly after
+`risk_engine`/`ai_council` have already decided — it explains and executes
+on a decision, it never makes one. Every narrative is generated in
+**English and Spanish** from the same pipeline run, and `apps/web` has an
+ES/EN language selector (UI chrome + narrative text; only the
+machine-generated `reason`/`finding` detail strings stay in English in
+both). The dashboard now also shows derivatives (funding rate/basis),
+structured strategy signals + risk decisions, and paper trading positions —
+see `services/ai-council/README.md`'s Pipeline section.
 
 ## Repository layout
 
@@ -111,7 +118,8 @@ pnpm --filter @qmi/web dev           # dashboard at http://localhost:3000
 
 # once a few minutes of 1m bars have accumulated:
 DATABASE_URL=$DATABASE_URL python -m feature_engine.main
-DATABASE_URL=$DATABASE_URL python -m ai_council.run_narrative   # writes a broker narrative per symbol
+# runs the full pipeline: narrative + signals/risk decisions + paper trading
+DATABASE_URL=$DATABASE_URL python -m ai_council.run_pipeline
 ```
 
 ```bash

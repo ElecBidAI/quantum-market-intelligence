@@ -4,18 +4,27 @@ import { createLogger } from "@qmi/observability";
 import { protect } from "./entitlements.js";
 import { type AuthRouteDeps, registerAuthRoutes } from "./routes/auth.js";
 import { type CouncilRouteDeps, registerCouncilRoutes } from "./routes/council.js";
+import { type DerivativesRouteDeps, registerDerivativesRoutes } from "./routes/derivatives.js";
 import { type MarketRouteDeps, registerMarketRoutes } from "./routes/market.js";
+import { type PaperTradingRouteDeps, registerPaperTradingRoutes } from "./routes/paper-trading.js";
+import { type SignalsRouteDeps, registerSignalsRoutes } from "./routes/signals.js";
 import { type SsoRouteDeps, registerSsoRoutes } from "./routes/sso.js";
 
 export interface AppDeps {
   /** Omitted in Phase 0-only contexts (e.g. the plain health-check test); required for /market/* and /stream/market. */
   market?: MarketRouteDeps;
-  /** Required for /auth/* and, transitively, for /market/* and /council/* (all now require an authenticated session — see routes/market.ts, routes/council.ts). */
+  /** Required for /auth/*, and transitively for every other route below (all now require an authenticated session). */
   auth?: AuthRouteDeps;
   /** Only present when AUTH_ENCRYPTION_KEY is configured — see server.ts. */
   sso?: SsoRouteDeps;
   /** Required for /council/narrative — see routes/council.ts. */
   council?: CouncilRouteDeps;
+  /** Required for /derivatives/latest — see routes/derivatives.ts. */
+  derivatives?: DerivativesRouteDeps;
+  /** Required for /signals/latest — see routes/signals.ts. */
+  signals?: SignalsRouteDeps;
+  /** Required for /paper-trading/latest — see routes/paper-trading.ts. */
+  paperTrading?: PaperTradingRouteDeps;
 }
 
 /**
@@ -62,6 +71,18 @@ export function buildApp(deps: AppDeps = {}): FastifyInstance {
 
   if (deps.council && deps.auth) {
     registerCouncilRoutes(app, deps.council, protect(deps.auth, "council-narrative:read"));
+  }
+
+  if (deps.derivatives && deps.auth) {
+    registerDerivativesRoutes(app, deps.derivatives, protect(deps.auth, "market-data:read"));
+  }
+
+  if (deps.signals && deps.auth) {
+    registerSignalsRoutes(app, deps.signals, protect(deps.auth, "strategy-signals:read"));
+  }
+
+  if (deps.paperTrading && deps.auth) {
+    registerPaperTradingRoutes(app, deps.paperTrading, protect(deps.auth, "paper-trading:read"));
   }
 
   return app;

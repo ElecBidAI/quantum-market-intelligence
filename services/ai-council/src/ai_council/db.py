@@ -1,7 +1,7 @@
 """Postgres access for ai-council, kept thin and injectable for tests.
 
 Any object exposing `.execute(sql, params)` and `.fetchall()` the way a
-psycopg cursor does will work here — tests pass a fake, run_narrative.py
+psycopg cursor does will work here — tests pass a fake, run_pipeline.py
 passes a real psycopg cursor. Mirrors
 services/feature-engine/src/feature_engine/db.py's shape exactly; not
 imported from there — services only share state through Postgres, not
@@ -15,6 +15,7 @@ import json
 from collections.abc import Sequence
 from typing import Protocol
 
+from paper_execution.fills import Fill
 from regime_engine.classify import Bar
 
 
@@ -72,7 +73,7 @@ def insert_narrative(
     same policy as risk_decisions (data/migrations/0001_init.sql).
 
     Both language renders are required — see
-    ai_council.narrator's module docstring: run_narrative.py always calls
+    ai_council.narrator's module docstring: run_pipeline.py always calls
     `generate_narrative` twice (language="en" and "es") against the same
     pipeline output before persisting, so there's never a row with only
     one language present.
@@ -102,3 +103,92 @@ def insert_narrative(
             timestamp,
         ),
     )
+
+
+def insert_signal(cursor: Cursor, candidate: dict) -> None:
+    """Appends one row to `signals` (data/migrations/0001_init.sql) —
+    mirrors packages/contracts/src/strategy.ts's `strategyCandidate`
+    field-for-field. Append-only, never an upsert, same policy as every
+    other table this module writes."""
+    cursor.execute(
+        """
+        INSERT INTO signals
+            (strategy_id, symbol, venue, direction, horizon, signal_strength,
+             entry_logic, invalidation_logic, stop_logic, target_logic,
+             expected_edge, estimated_costs, regime, "timestamp")
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        (
+            candidate["strategyId"],
+            candidate["symbol"],
+            candidate["venue"],
+            candidate["direction"],
+            candidate["horizon"],
+            candidate["signalStrength"],
+            json.dumps(candidate["entryLogic"]),
+            json.dumps(candidate["invalidationLogic"]),
+            json.dumps(candidate["stopLogic"]),
+            json.dumps(candidate["targetLogic"]),
+            candidate["expectedEdge"],
+            candidate["estimatedCosts"],
+            candidate["regime"],
+            candidate["timestamp"],
+        ),
+    )
+
+
+def insert_risk_decision(cursor: Cursor, decision: dict, symbol: str) -> None:
+    """Appends one row to `risk_decisions` — immutable/append-only by
+    policy (data/migrations/0001_init.sql's own comment: corrections are
+    new rows, never UPDATEs).
+
+    `symbol` is not a field on `decision` itself (risk_engine's decision
+    dict, and packages/contracts/src/risk.ts's `riskDecision` schema it
+    mirrors, have no symbol field) — the caller must supply it. Without it,
+    a signal's risk decision can only be correlated by strategy_id +
+    timestamp, which is ambiguous whenever two symbols pick the same
+    strategy in the same run with bars sharing a last-bar timestamp
+    (data/migrations/0011_risk_decisions_symbol.sql's own comment has the
+    real example this was caught from)."""
+    cursor.execute(
+        """
+        INSERT INTO risk_decisions
+            (decision, strategy_id, symbol, reasons, sizing_adjustment, "timestamp")
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """,
+        (
+            decision["decision"],
+            decision["strategyId"],
+            symbol,
+            json.dumps(decision["reasons"]),
+            decision["sizingAdjustment"],
+            decision["timestamp"],
+        ),
+    )
+
+
+def fetch_all_fills(cursor: Cursor) -> list[Fill]:
+    """Fetches every fill ever recorded, oldest first — the full ledger
+    `paper_execution.positions.replay_positions` needs to reconstruct the
+    current PositionBook from scratch. There is no persisted in-memory
+    book across runs (see run_pipeline.py's module docstring), so this
+    read happens once at the start of every run."""
+    cursor.execute(
+        """
+        SELECT order_id, symbol, direction, size_pct, price, "timestamp"
+        FROM fills
+        ORDER BY "timestamp" ASC
+        """
+    )
+    rows = cursor.fetchall()
+    return [
+        Fill(
+            order_id=row[0],
+            symbol=row[1],
+            direction=row[2],
+            size_pct=row[3],
+            price=row[4],
+            timestamp=row[5].isoformat() if hasattr(row[5], "isoformat") else str(row[5]),
+        )
+        for row in rows
+    ]

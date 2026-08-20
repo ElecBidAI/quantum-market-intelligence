@@ -64,7 +64,7 @@ denylist/field-fidelity regression tests that guard against it ever
 drifting into a profitability claim.
 
 **Bilingual.** `generate_narrative(..., language="en" | "es")` renders both
-languages from the exact same pipeline output — `run_narrative.py` calls it
+languages from the exact same pipeline output — `run_pipeline.py` calls it
 twice per symbol, never re-running the pipeline. Machine-generated
 `reason`/`finding` `detail` strings (e.g. `"position would be 5.00%, limit
 is 3.00%"`) are never translated in either language — only the prose
@@ -73,13 +73,40 @@ sentence around them is; regime/direction/stance enum values (e.g.
 but the stored/transmitted values never change. `test_narrator.py` runs
 every branch test in both languages, including a Spanish denylist.
 
-`run_narrative.py` (`python -m ai_council.run_narrative`) is a one-shot
-batch job — same "not a daemon" status as `feature_engine.main` — that
-runs `regime_engine` → `strategy_engine` → `risk_engine` → this council →
-`narrator.py` against real Postgres-ingested bars and writes one row per
-symbol to `council_narratives` (`data/migrations/0009_council_narratives.sql`).
+## Pipeline
+
+`run_pipeline.py` (`python -m ai_council.run_pipeline`, renamed from
+`run_narrative.py` — its scope grew) is a one-shot batch job — same "not a
+daemon" status as `feature_engine.main` — that runs `regime_engine` →
+`strategy_engine` → `risk_engine` → this council → `narrator.py` against
+real Postgres-ingested bars and persists **everything it produces**:
+
+- `signals` / `risk_decisions` (`data/migrations/0001_init.sql`) — the raw
+  candidate and its risk decision, correlated by `strategy_id` + an
+  exactly-matching `timestamp` (deliberately passed into
+  `risk_engine.evaluate(now=...)` so the two rows line up by construction —
+  `risk_decisions` has no `symbol` column to join on directly).
+- `council_narratives` (`data/migrations/0009_council_narratives.sql`, `0010`
+  for the bilingual columns) — the narrator's output, as above.
+- `paper_orders` / `fills` / `portfolio_snapshots`
+  (`data/migrations/0006_paper_execution.sql`) — when a decision is
+  APPROVE/REDUCE, `paper_execution.orders.create_order_from_decision` +
+  `FillSimulator.simulate_fill` produce a simulated order/fill, exactly the
+  same functions `paper_execution`'s own `test_integration.py` exercises
+  against synthetic fixtures — this is the first time they run against the
+  real chain instead. Positions are **replayed from the `fills` ledger on
+  every run** (`paper_execution.positions.replay_positions`), never carried
+  in memory between runs, so there's no drift to reconcile against.
+
 This is the first thing in the repository that chains the full pipeline
 against real ingested data rather than synthetic test fixtures.
+
+**Known limitation, documented not silent**: every run that gets an
+APPROVE/REDUCE creates a *new* paper order/fill — there's no
+de-duplication against an already-open position for the same
+strategy/symbol/direction. Acceptable for a manually-triggered demo
+script nothing schedules yet; would need addressing before this ever runs
+unattended on a cadence.
 
 ## Not in Phase 8
 
@@ -91,14 +118,14 @@ against real ingested data rather than synthetic test fixtures.
   always-`NEUTRAL` stubs would be worse than not having them: a stub that
   always abstains looks identical to "checked and found nothing," which is
   a lie about what actually happened.
-- **Not a live/scheduled service** — `run_narrative.py` is a batch job, not
+- **Not a live/scheduled service** — `run_pipeline.py` is a batch job, not
   a daemon; nothing in this repository schedules it (cron/systemd timer,
   same as `feature-engine`).
 
 ## Tests
 
-65 tests. Every agent's confidence formula is checked against hand-picked
+69 tests. Every agent's confidence formula is checked against hand-picked
 boundary values (e.g. `QuantAgent`'s edge/cost ratio at exactly its SUPPORT
 threshold), not just "some opinion was returned." `test_narrator.py` and
-`test_db.py` cover the narrator/persistence layer added after Phase 8,
-including both languages.
+`test_db.py` cover the narrator/pipeline persistence layer added after
+Phase 8, including both languages.
