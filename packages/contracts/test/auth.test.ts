@@ -79,4 +79,8 @@ describe("ENTITLEMENTS", () => {
   it.each(plan.options)("grants market-data:read to the %s plan", (planValue) => {
     expect(ENTITLEMENTS[planValue].has("market-data:read")).toBe(true);
   });
+
+  it.each(plan.options)("grants council-narrative:read to the %s plan", (planValue) => {
+    expect(ENTITLEMENTS[planValue].has("council-narrative:read")).toBe(true);
+  });
 });

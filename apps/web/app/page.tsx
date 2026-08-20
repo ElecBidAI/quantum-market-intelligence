@@ -1,4 +1,5 @@
 import AuthGate from "./AuthGate";
+import BrokerNarrativeCard from "./BrokerNarrativeCard";
 import MarketDashboard from "./MarketDashboard";
 
 export default function HomePage() {
@@ -15,6 +16,7 @@ export default function HomePage() {
       </p>
       <AuthGate>
         <MarketDashboard />
+        <BrokerNarrativeCard />
       </AuthGate>
     </main>
   );

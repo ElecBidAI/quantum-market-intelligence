@@ -14,13 +14,16 @@ the regimes each declares), every candidate is run through
 an approved/reduced decision into a simulated order, fill, and tracked
 position (with reconciliation and performance analytics), and
 `services/ai-council`'s rule-based agents (Quant, Risk Officer, Devil's
-Advocate, Auditor, Chief Intelligence) analyze the same evidence alongside the
-pipeline, never executing anything themselves. Integration tests run the
+Advocate, Auditor) analyze the same evidence alongside the pipeline via
+`council.synthesize()` — the "Chief Intelligence" aggregation rule, not a
+5th agent — never executing anything themselves. Integration tests run the
 whole chain: bars → regime → candidate → risk decision → paper order → fill →
-position, with the council's synthesis checked alongside it. None of this
-runs on a schedule against live data yet (see
+position, with the council's synthesis checked alongside it. The
+strategy→risk→paper-execution chain itself still doesn't run on a schedule
+against live data (see
 [`docs/architecture/QMI-MASTER-ARCHITECTURE.md`](docs/architecture/QMI-MASTER-ARCHITECTURE.md)
-Section 6 for exactly what's real vs. not). Live market data is real (Binance
+Section 6 for exactly what's real vs. not), though a separate read-only
+narrative chain now does (see below). Live market data is real (Binance
 spot, BTC/ETH) but read-only: nothing in this repository can place a real order.
 New in Phase 9: `services/market-data`'s `BinanceFuturesAdapter` ingests
 perpetual-futures funding rate and futures-vs-index basis, and
@@ -33,6 +36,18 @@ and OIDC enterprise SSO — see
 [`docs/architecture/ACCESS-AND-LICENSING.md`](docs/architecture/ACCESS-AND-LICENSING.md).
 It gates who can call the platform; it has no bearing on the Risk Engine's
 authority over trading decisions.
+
+Also new: a **broker narrative** feature. `ai_council.narrator` (deterministic,
+template-based prose, never LLM-generated) explains the pipeline's existing
+regime/candidate/risk/council output in plain language, always ending with a
+fixed disclaimer (paper/simulated account, not investment advice, no capital
+at risk) — even on a hard `REJECT`. `python -m ai_council.run_narrative` is a
+batch job (not scheduled by anything in this repo yet) that runs the full
+chain against real ingested bars and persists one narrative per symbol,
+readable via `apps/api`'s `GET /council/narrative` and shown on the
+dashboard. It runs strictly after `risk_engine`/`ai_council` have already
+decided — it explains a decision, it never makes one. See
+`services/ai-council/README.md`'s Narrator section.
 
 ## Repository layout
 
@@ -52,7 +67,7 @@ yet contains a `README.md` explaining what it will hold and which phase implemen
 cp .env.example .env        # fill in local values; never commit .env
 
 docker compose up -d        # Postgres/TimescaleDB + Redis
-# apply data/migrations/*.sql in order (0001-0006) against $DATABASE_URL
+# apply data/migrations/*.sql in order (0001-0009) against $DATABASE_URL
 # (docker-compose.yml also auto-applies them for a fresh volume)
 
 pnpm install                 # installs apps/*, packages/contracts, packages/config,
@@ -93,6 +108,7 @@ pnpm --filter @qmi/web dev           # dashboard at http://localhost:3000
 
 # once a few minutes of 1m bars have accumulated:
 DATABASE_URL=$DATABASE_URL python -m feature_engine.main
+DATABASE_URL=$DATABASE_URL python -m ai_council.run_narrative   # writes a broker narrative per symbol
 ```
 
 ```bash

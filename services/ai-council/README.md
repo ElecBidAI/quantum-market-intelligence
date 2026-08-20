@@ -44,6 +44,33 @@ construction rather than convention.
 `regime` field no longer matches a freshly-reclassified regime, which
 `Auditor` catches.
 
+## Narrator
+
+`narrator.py` (added after Phase 8, alongside the platform's separate
+Access & Licensing work) renders the pipeline's structured output — a
+`StrategyCandidate`, `RegimeResult`, risk decision, and the council's
+`AgentOpinion`s/`ChiefIntelligenceThesis` — as plain-language, broker-voice
+prose: "here's the regime, here's what the strategy proposed, here's what
+risk management decided and why, here's whether the council agrees." It is
+**explanatory, not a new decision authority**: it runs strictly *after*
+`risk_engine.evaluate()` and `council.synthesize()` have already produced
+their outputs, restates them, and cannot alter, delay, or bypass either.
+No LLM call is involved — every sentence is a fixed template over fields
+that already exist on its inputs, and every branch (including a hard
+`REJECT`) ends with a fixed disclaimer (paper/simulated account only, not
+investment advice, no capital at risk). See the module's own docstring for
+the exact branch/wording rules, and `tests/test_narrator.py` for the
+denylist/field-fidelity regression tests that guard against it ever
+drifting into a profitability claim.
+
+`run_narrative.py` (`python -m ai_council.run_narrative`) is a one-shot
+batch job — same "not a daemon" status as `feature_engine.main` — that
+runs `regime_engine` → `strategy_engine` → `risk_engine` → this council →
+`narrator.py` against real Postgres-ingested bars and writes one row per
+symbol to `council_narratives` (`data/migrations/0009_council_narratives.sql`).
+This is the first thing in the repository that chains the full pipeline
+against real ingested data rather than synthetic test fixtures.
+
 ## Not in Phase 8
 
 - **Trader, Market Structure, Macro, On-Chain, Derivatives, Portfolio, and
@@ -54,16 +81,13 @@ construction rather than convention.
   always-`NEUTRAL` stubs would be worse than not having them: a stub that
   always abstains looks identical to "checked and found nothing," which is
   a lie about what actually happened.
-- **No persistence.** The brief's Section 20 database-domain list has no
-  council-decisions table, and inventing one wasn't asked for — a council
-  thesis is meant to inform the same audit trail `research_runs` and
-  `risk_decisions` already provide, not become a new source of truth.
-- **Not a live/scheduled service** — same status as every other
-  `*-engine`/`*-council` component so far: a callable pipeline, proven by
-  tests, not a daemon.
+- **Not a live/scheduled service** — `run_narrative.py` is a batch job, not
+  a daemon; nothing in this repository schedules it (cron/systemd timer,
+  same as `feature-engine`).
 
 ## Tests
 
-36 tests. Every agent's confidence formula is checked against hand-picked
+54 tests. Every agent's confidence formula is checked against hand-picked
 boundary values (e.g. `QuantAgent`'s edge/cost ratio at exactly its SUPPORT
-threshold), not just "some opinion was returned."
+threshold), not just "some opinion was returned." `test_narrator.py` and
+`test_db.py` cover the narrator/persistence layer added after Phase 8.

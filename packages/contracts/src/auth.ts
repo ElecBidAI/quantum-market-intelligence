@@ -56,21 +56,19 @@ export const ssoConnection = z
 export type SsoConnection = z.infer<typeof ssoConnection>;
 
 /**
- * Gate-able capabilities. There is exactly one today because apps/api only
- * has one route group worth gating (market data); adding the next feature
- * (e.g. "derivatives:read") is a matter of extending this union and
- * `ENTITLEMENTS` below, not building a new mechanism.
+ * Gate-able capabilities. Adding the next feature is a matter of extending
+ * this union and `ENTITLEMENTS` below, not building a new mechanism.
  */
-export type Feature = "market-data:read";
+export type Feature = "market-data:read" | "council-narrative:read";
 
 /**
- * Plan -> feature map. All three plans currently grant the same one
- * feature (nothing to differentiate on yet); this map is still the single
- * source of truth `apps/api`'s `requireEntitlement` reads, so introducing a
+ * Plan -> feature map. All three plans currently grant both features
+ * (nothing to differentiate on yet); this map is still the single source
+ * of truth `apps/api`'s `requireEntitlement` reads, so introducing a
  * plan-gated feature later is a one-line edit here, not a new code path.
  */
 export const ENTITLEMENTS: Record<Plan, ReadonlySet<Feature>> = {
-  free: new Set(["market-data:read"]),
-  pro: new Set(["market-data:read"]),
-  enterprise: new Set(["market-data:read"]),
+  free: new Set(["market-data:read", "council-narrative:read"]),
+  pro: new Set(["market-data:read", "council-narrative:read"]),
+  enterprise: new Set(["market-data:read", "council-narrative:read"]),
 };

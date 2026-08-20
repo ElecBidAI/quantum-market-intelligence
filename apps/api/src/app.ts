@@ -3,16 +3,19 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { createLogger } from "@qmi/observability";
 import { protect } from "./entitlements.js";
 import { type AuthRouteDeps, registerAuthRoutes } from "./routes/auth.js";
+import { type CouncilRouteDeps, registerCouncilRoutes } from "./routes/council.js";
 import { type MarketRouteDeps, registerMarketRoutes } from "./routes/market.js";
 import { type SsoRouteDeps, registerSsoRoutes } from "./routes/sso.js";
 
 export interface AppDeps {
   /** Omitted in Phase 0-only contexts (e.g. the plain health-check test); required for /market/* and /stream/market. */
   market?: MarketRouteDeps;
-  /** Required for /auth/* and, transitively, for /market/* (both now require an authenticated session — see routes/market.ts). */
+  /** Required for /auth/* and, transitively, for /market/* and /council/* (all now require an authenticated session — see routes/market.ts, routes/council.ts). */
   auth?: AuthRouteDeps;
   /** Only present when AUTH_ENCRYPTION_KEY is configured — see server.ts. */
   sso?: SsoRouteDeps;
+  /** Required for /council/narrative — see routes/council.ts. */
+  council?: CouncilRouteDeps;
 }
 
 /**
@@ -55,6 +58,10 @@ export function buildApp(deps: AppDeps = {}): FastifyInstance {
 
   if (deps.market && deps.auth) {
     registerMarketRoutes(app, deps.market, protect(deps.auth, "market-data:read"));
+  }
+
+  if (deps.council && deps.auth) {
+    registerCouncilRoutes(app, deps.council, protect(deps.auth, "council-narrative:read"));
   }
 
   return app;

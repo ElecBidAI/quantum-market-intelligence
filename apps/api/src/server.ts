@@ -26,6 +26,7 @@ async function main(): Promise<void> {
       ttlSeconds: env.SESSION_TTL_SECONDS,
       cookieOptions,
     };
+    deps.council = { pool };
 
     if (env.AUTH_ENCRYPTION_KEY) {
       deps.sso = {

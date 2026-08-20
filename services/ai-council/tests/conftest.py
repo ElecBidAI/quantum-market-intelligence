@@ -2,6 +2,8 @@ import pytest
 from regime_engine.classify import RegimeResult
 
 from ai_council.context import CouncilContext
+from ai_council.council import ChiefIntelligenceThesis
+from ai_council.opinion import AgentOpinion
 
 
 def _make_candidate(**overrides):
@@ -61,6 +63,24 @@ def _make_context(**overrides):
     return CouncilContext(**{**defaults, **overrides})
 
 
+def _make_opinions(**overrides):
+    """One opinion per real agent, all fully aligned SUPPORT by default (DevilsAdvocate
+    can never SUPPORT by construction, so its default is a clean NEUTRAL/no-findings)."""
+    defaults = dict(
+        quant_agent=AgentOpinion("quant_agent", "SUPPORT", 0.9, []),
+        risk_officer=AgentOpinion("risk_officer", "SUPPORT", 1.0, []),
+        devils_advocate=AgentOpinion("devils_advocate", "NEUTRAL", 0.0, []),
+        auditor_agent=AgentOpinion("auditor_agent", "SUPPORT", 1.0, []),
+    )
+    return list({**defaults, **overrides}.values())
+
+
+def _make_thesis(opinions=None, final_stance="SUPPORT", weighted_score=1.0):
+    return ChiefIntelligenceThesis(
+        final_stance, weighted_score, opinions if opinions is not None else _make_opinions()
+    )
+
+
 # Factory fixtures: pytest discovers conftest.py fixtures regardless of
 # --import-mode (unlike `from conftest import ...`, which only works under
 # the default "prepend" mode — a real bug caught when this suite was run
@@ -93,3 +113,13 @@ def reject_decision():
 @pytest.fixture
 def make_context():
     return _make_context
+
+
+@pytest.fixture
+def make_opinions():
+    return _make_opinions
+
+
+@pytest.fixture
+def make_thesis():
+    return _make_thesis
