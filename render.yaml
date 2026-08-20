@@ -1,0 +1,143 @@
+# Render Blueprint (https://render.com/docs/blueprint-spec). Apply from the
+# Render dashboard: New -> Blueprint -> select this repo. Every service maps
+# 1:1 onto how this repo already describes itself running (see each
+# service's own README / module docstring for the "why").
+#
+# DATABASE_URL is intentionally `sync: false` everywhere (a manual field,
+# not auto-wired) — qmi-postgres is a self-hosted Docker Postgres, not
+# Render's managed Postgres product (see deploy/postgres/Dockerfile for
+# why), so Render has no built-in way to hand its connection string to
+# other services automatically. Fill it in once after qmi-postgres's first
+# deploy — see docs/deployment/RENDER-DEPLOYMENT.md.
+
+services:
+  # --- Data stores ---
+
+  - type: pserv
+    name: qmi-postgres
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./deploy/postgres/Dockerfile
+    dockerContext: .
+    disk:
+      name: qmi-postgres-data
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 1
+    envVars:
+      - key: POSTGRES_DB
+        value: qmi
+      - key: POSTGRES_USER
+        value: qmi
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+
+  - type: keyvalue
+    name: qmi-redis
+    plan: starter
+    ipAllowList: [] # no public access; only other services in this Blueprint reach it
+
+  # --- apps/api: gateway / auth / orchestration ---
+
+  - type: web
+    name: qmi-api
+    runtime: node
+    plan: starter
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build:packages && pnpm --filter @qmi/api run build
+    startCommand: pnpm --filter @qmi/api run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # apps/api reads API_PORT (packages/config), not Render's own PORT —
+      # both are pinned to the same literal so Render's router and Fastify
+      # agree on where traffic actually lands.
+      - key: PORT
+        value: "4000"
+      - key: API_PORT
+        value: "4000"
+      - key: API_PUBLIC_URL
+        value: https://qmi-api.onrender.com
+      - key: SESSION_COOKIE_NAME
+        value: qmi_session
+      - key: SESSION_TTL_SECONDS
+        value: "604800"
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          name: qmi-redis
+          type: keyvalue
+          property: connectionString
+      # Unset on purpose: apps/api simply doesn't register SSO routes
+      # without it (see packages/config). Add it manually if/when SSO is
+      # actually wanted: openssl rand -base64 32.
+      # - key: AUTH_ENCRYPTION_KEY
+
+  # --- apps/web: dashboard ---
+
+  - type: web
+    name: qmi-web
+    runtime: node
+    plan: starter
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build:packages && pnpm --filter @qmi/web run build
+    # Next.js's `next start` doesn't read Render's $PORT on its own; passed
+    # through explicitly. NEXT_PUBLIC_API_URL is inlined at *build* time
+    # (see next.config.mjs), so it must already be set above, not just at
+    # runtime.
+    startCommand: pnpm --filter @qmi/web run start -- -p $PORT
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: https://qmi-api.onrender.com
+
+  # --- services/market-data: exchange ingestion (long-running, not a web server) ---
+
+  - type: worker
+    name: qmi-market-data
+    runtime: node
+    plan: starter
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build:packages && pnpm --filter @qmi/market-data run build
+    startCommand: pnpm --filter @qmi/market-data run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          name: qmi-redis
+          type: keyvalue
+          property: connectionString
+
+  # --- Python batch jobs: deliberately one-shot scripts (see each
+  # module's own docstring), scheduled here rather than run as daemons. ---
+
+  - type: cron
+    name: qmi-run-pipeline
+    runtime: python
+    plan: starter
+    schedule: "*/15 * * * *"
+    buildCommand: >-
+      pip install -e packages/quant-core -e services/feature-engine
+      -e services/risk-engine -e services/backtester -e services/simulation-engine
+      -e services/regime-engine -e services/strategy-engine -e services/paper-execution
+      -e services/ai-council
+    startCommand: python -m ai_council.run_pipeline
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+
+  - type: cron
+    name: qmi-research-runner
+    runtime: python
+    plan: starter
+    schedule: "0 * * * *"
+    buildCommand: >-
+      pip install -e packages/quant-core -e services/feature-engine
+      -e services/risk-engine -e services/backtester -e services/simulation-engine
+      -e services/regime-engine -e services/strategy-engine -e services/paper-execution
+      -e services/ai-council
+    startCommand: python -m backtester.research_runner
+    envVars:
+      - key: DATABASE_URL
+        sync: false
