@@ -22,7 +22,8 @@ function fakePool(): QueryablePool {
               sizing_adjustment: null,
               final_stance: "SUPPORT",
               weighted_score: 1.0,
-              narrative: "some broker narrative text",
+              narrative_en: "some broker narrative text",
+              narrative_es: "algún texto narrativo del bróker",
               timestamp: "2026-08-19T00:00:00Z",
             },
           ],
@@ -71,7 +72,8 @@ describe("GET /council/narrative", () => {
     const body = response.json();
     expect(body.narratives).toHaveLength(1);
     expect(body.narratives[0].symbol).toBe("BTC-USDT");
-    expect(body.narratives[0].narrative).toBe("some broker narrative text");
+    expect(body.narratives[0].narrativeEn).toBe("some broker narrative text");
+    expect(body.narratives[0].narrativeEs).toBe("algún texto narrativo del bróker");
 
     await app.close();
   });

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { apiFetch, apiStreamUrl } from "../lib/api-client";
+import { statusLabel } from "../lib/i18n";
 import {
   applyLatestSnapshot,
   applyOhlcvEvent,
@@ -10,12 +11,14 @@ import {
   isLive,
   type MarketState,
 } from "../lib/market-state";
+import { useLocale } from "./LocaleProvider";
 
 const SYMBOLS = ["BTC-USDT", "ETH-USDT"] as const;
 
 type ConnectionStatus = "connecting" | "connected" | "error";
 
 export default function MarketDashboard() {
+  const { locale, t } = useLocale();
   const [state, setState] = useState<MarketState>(() => initMarketState(SYMBOLS));
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [now, setNow] = useState<Date>(new Date());
@@ -59,19 +62,19 @@ export default function MarketDashboard() {
 
   return (
     <section style={{ marginTop: "2rem" }}>
-      <h2>Live prices</h2>
+      <h2>{t("dashboard.heading")}</h2>
       <p style={{ color: "#666", fontSize: "0.9rem" }}>
-        Feed: /api (proxied) — connection {status}. Prices below are only ever what the
-        exchange actually sent; a blank row means no data has arrived yet.
+        {t("dashboard.feedIntroPrefix")} {statusLabel(locale, status)}.{" "}
+        {t("dashboard.feedIntroSuffix")}
       </p>
       <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: 560 }}>
         <thead>
           <tr>
-            <th style={cellStyle}>Symbol</th>
-            <th style={cellStyle}>Exchange</th>
-            <th style={cellStyle}>Last price</th>
-            <th style={cellStyle}>Last update (UTC)</th>
-            <th style={cellStyle}>Live</th>
+            <th style={cellStyle}>{t("dashboard.colSymbol")}</th>
+            <th style={cellStyle}>{t("dashboard.colExchange")}</th>
+            <th style={cellStyle}>{t("dashboard.colPrice")}</th>
+            <th style={cellStyle}>{t("dashboard.colUpdate")}</th>
+            <th style={cellStyle}>{t("dashboard.colLive")}</th>
           </tr>
         </thead>
         <tbody>
@@ -85,7 +88,7 @@ export default function MarketDashboard() {
                 <td style={cellStyle}>{row?.lastPrice ?? "—"}</td>
                 <td style={cellStyle}>{row?.lastUpdate ?? "—"}</td>
                 <td style={{ ...cellStyle, color: live ? "#0a7d32" : "#999" }}>
-                  {live ? "LIVE" : "stale/no data"}
+                  {live ? t("dashboard.live") : t("dashboard.stale")}
                 </td>
               </tr>
             );

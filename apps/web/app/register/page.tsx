@@ -3,9 +3,11 @@
 import { useState, type CSSProperties, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../lib/api-client";
+import { useLocale } from "../LocaleProvider";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [organizationName, setOrganizationName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,9 +27,9 @@ export default function RegisterPage() {
       if (res.ok) {
         router.push("/");
       } else if (res.status === 409) {
-        setError("An account with that email already exists.");
+        setError(t("register.errorDuplicate"));
       } else {
-        setError("Could not register. Check your details and try again.");
+        setError(t("register.errorGeneric"));
       }
     } finally {
       setSubmitting(false);
@@ -36,10 +38,10 @@ export default function RegisterPage() {
 
   return (
     <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem", maxWidth: 360 }}>
-      <h1>Create your organization</h1>
+      <h1>{t("register.heading")}</h1>
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
         <label>
-          Organization name
+          {t("register.orgName")}
           <input
             type="text"
             required
@@ -49,7 +51,7 @@ export default function RegisterPage() {
           />
         </label>
         <label>
-          Email
+          {t("register.email")}
           <input
             type="email"
             required
@@ -59,7 +61,7 @@ export default function RegisterPage() {
           />
         </label>
         <label>
-          Password
+          {t("register.password")}
           <input
             type="password"
             required
@@ -71,11 +73,11 @@ export default function RegisterPage() {
         </label>
         {error && <p style={{ color: "#b00020" }}>{error}</p>}
         <button type="submit" disabled={submitting}>
-          {submitting ? "Creating account…" : "Create account"}
+          {submitting ? t("register.submitting") : t("register.submit")}
         </button>
       </form>
       <p>
-        Already have an account? <a href="/login">Log in</a>
+        {t("register.haveAccount")} <a href="/login">{t("register.loginLink")}</a>
       </p>
     </main>
   );

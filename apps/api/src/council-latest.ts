@@ -9,7 +9,8 @@ interface CouncilNarrativeDbRow {
   sizing_adjustment: number | null;
   final_stance: "SUPPORT" | "OPPOSE" | "NEUTRAL" | "VETO" | null;
   weighted_score: number | null;
-  narrative: string;
+  narrative_en: string;
+  narrative_es: string;
   timestamp: string;
 }
 
@@ -22,7 +23,8 @@ export interface CouncilNarrative {
   sizingAdjustment: number | null;
   finalStance: "SUPPORT" | "OPPOSE" | "NEUTRAL" | "VETO" | null;
   weightedScore: number | null;
-  narrative: string;
+  narrativeEn: string;
+  narrativeEs: string;
   timestamp: string;
 }
 
@@ -42,7 +44,7 @@ export async function getLatestCouncilNarratives(
   for (const symbol of symbols) {
     const result = await pool.query<CouncilNarrativeDbRow>(
       `SELECT symbol, strategy_id, regime, regime_confidence, decision, sizing_adjustment,
-              final_stance, weighted_score, narrative, "timestamp"
+              final_stance, weighted_score, narrative_en, narrative_es, "timestamp"
        FROM council_narratives
        WHERE symbol = $1
        ORDER BY "timestamp" DESC
@@ -60,7 +62,8 @@ export async function getLatestCouncilNarratives(
       sizingAdjustment: row.sizing_adjustment,
       finalStance: row.final_stance,
       weightedScore: row.weighted_score,
-      narrative: row.narrative,
+      narrativeEn: row.narrative_en,
+      narrativeEs: row.narrative_es,
       timestamp: row.timestamp,
     });
   }

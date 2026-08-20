@@ -61,21 +61,29 @@ def insert_narrative(
     sizing_adjustment: float | None,
     final_stance: str | None,
     weighted_score: float | None,
-    narrative: str,
+    narrative_en: str,
+    narrative_es: str,
     candidate: dict | None,
     risk_decision: dict | None,
     opinions: list[dict] | None,
     timestamp: str,
 ) -> None:
     """Appends one row. Never an upsert — council_narratives is append-only,
-    same policy as risk_decisions (data/migrations/0001_init.sql)."""
+    same policy as risk_decisions (data/migrations/0001_init.sql).
+
+    Both language renders are required — see
+    ai_council.narrator's module docstring: run_narrative.py always calls
+    `generate_narrative` twice (language="en" and "es") against the same
+    pipeline output before persisting, so there's never a row with only
+    one language present.
+    """
     cursor.execute(
         """
         INSERT INTO council_narratives
             (symbol, strategy_id, regime, regime_confidence, decision, sizing_adjustment,
-             final_stance, weighted_score, narrative, candidate, risk_decision, opinions,
-             "timestamp")
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             final_stance, weighted_score, narrative_en, narrative_es, candidate,
+             risk_decision, opinions, "timestamp")
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (
             symbol,
@@ -86,7 +94,8 @@ def insert_narrative(
             sizing_adjustment,
             final_stance,
             weighted_score,
-            narrative,
+            narrative_en,
+            narrative_es,
             json.dumps(candidate) if candidate is not None else None,
             json.dumps(risk_decision) if risk_decision is not None else None,
             json.dumps(opinions) if opinions is not None else None,

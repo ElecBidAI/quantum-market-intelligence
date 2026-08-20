@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../lib/api-client";
+import { useLocale } from "./LocaleProvider";
 
 /**
  * Minimal client-side session gate: checks GET /auth/me on mount and
@@ -12,6 +13,7 @@ import { apiFetch } from "../lib/api-client";
  */
 export default function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const { t } = useLocale();
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }, [router]);
 
   if (!authenticated) {
-    return <p style={{ color: "#666" }}>Checking session…</p>;
+    return <p style={{ color: "#666" }}>{t("authGate.checking")}</p>;
   }
   return <>{children}</>;
 }

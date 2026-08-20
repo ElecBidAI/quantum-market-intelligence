@@ -63,6 +63,16 @@ the exact branch/wording rules, and `tests/test_narrator.py` for the
 denylist/field-fidelity regression tests that guard against it ever
 drifting into a profitability claim.
 
+**Bilingual.** `generate_narrative(..., language="en" | "es")` renders both
+languages from the exact same pipeline output — `run_narrative.py` calls it
+twice per symbol, never re-running the pipeline. Machine-generated
+`reason`/`finding` `detail` strings (e.g. `"position would be 5.00%, limit
+is 3.00%"`) are never translated in either language — only the prose
+sentence around them is; regime/direction/stance enum values (e.g.
+`BULLISH_TREND`) get a display-only Spanish lookup table inside the prose,
+but the stored/transmitted values never change. `test_narrator.py` runs
+every branch test in both languages, including a Spanish denylist.
+
 `run_narrative.py` (`python -m ai_council.run_narrative`) is a one-shot
 batch job — same "not a daemon" status as `feature_engine.main` — that
 runs `regime_engine` → `strategy_engine` → `risk_engine` → this council →
@@ -87,7 +97,8 @@ against real ingested data rather than synthetic test fixtures.
 
 ## Tests
 
-54 tests. Every agent's confidence formula is checked against hand-picked
+65 tests. Every agent's confidence formula is checked against hand-picked
 boundary values (e.g. `QuantAgent`'s edge/cost ratio at exactly its SUPPORT
 threshold), not just "some opinion was returned." `test_narrator.py` and
-`test_db.py` cover the narrator/persistence layer added after Phase 8.
+`test_db.py` cover the narrator/persistence layer added after Phase 8,
+including both languages.

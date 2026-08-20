@@ -55,7 +55,8 @@ def test_insert_narrative_issues_an_insert_with_expected_params():
         sizing_adjustment=None,
         final_stance="SUPPORT",
         weighted_score=1.0,
-        narrative="some narrative text",
+        narrative_en="some narrative text",
+        narrative_es="algo de texto narrativo",
         candidate={"strategyId": "trend_following_sma_v1"},
         risk_decision={"decision": "APPROVE"},
         opinions=[{"agent_id": "quant_agent"}],
@@ -68,10 +69,11 @@ def test_insert_narrative_issues_an_insert_with_expected_params():
     assert params[1] == "trend_following_sma_v1"
     assert params[2] == "BULLISH_TREND"
     assert params[8] == "some narrative text"
-    assert '"strategyId": "trend_following_sma_v1"' in params[9]
-    assert '"decision": "APPROVE"' in params[10]
-    assert '"agent_id": "quant_agent"' in params[11]
-    assert params[12] == "2026-08-19T00:00:00Z"
+    assert params[9] == "algo de texto narrativo"
+    assert '"strategyId": "trend_following_sma_v1"' in params[10]
+    assert '"decision": "APPROVE"' in params[11]
+    assert '"agent_id": "quant_agent"' in params[12]
+    assert params[13] == "2026-08-19T00:00:00Z"
 
 
 def test_insert_narrative_no_candidate_branch_nulls_out_json_fields():
@@ -86,7 +88,8 @@ def test_insert_narrative_no_candidate_branch_nulls_out_json_fields():
         sizing_adjustment=None,
         final_stance=None,
         weighted_score=None,
-        narrative="no candidate for this regime",
+        narrative_en="no candidate for this regime",
+        narrative_es="sin candidato para este régimen",
         candidate=None,
         risk_decision=None,
         opinions=None,
@@ -95,6 +98,6 @@ def test_insert_narrative_no_candidate_branch_nulls_out_json_fields():
 
     _, params = cursor.executed[0]
     assert params[1] is None  # strategy_id
-    assert params[9] is None  # candidate
-    assert params[10] is None  # risk_decision
-    assert params[11] is None  # opinions
+    assert params[10] is None  # candidate
+    assert params[11] is None  # risk_decision
+    assert params[12] is None  # opinions

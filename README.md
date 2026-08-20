@@ -46,8 +46,11 @@ batch job (not scheduled by anything in this repo yet) that runs the full
 chain against real ingested bars and persists one narrative per symbol,
 readable via `apps/api`'s `GET /council/narrative` and shown on the
 dashboard. It runs strictly after `risk_engine`/`ai_council` have already
-decided — it explains a decision, it never makes one. See
-`services/ai-council/README.md`'s Narrator section.
+decided — it explains a decision, it never makes one. Every narrative is
+generated in **English and Spanish** from the same pipeline run, and
+`apps/web` has an ES/EN language selector (UI chrome + narrative text; only
+the machine-generated `reason`/`finding` detail strings stay in English in
+both). See `services/ai-council/README.md`'s Narrator section.
 
 ## Repository layout
 
@@ -67,7 +70,7 @@ yet contains a `README.md` explaining what it will hold and which phase implemen
 cp .env.example .env        # fill in local values; never commit .env
 
 docker compose up -d        # Postgres/TimescaleDB + Redis
-# apply data/migrations/*.sql in order (0001-0009) against $DATABASE_URL
+# apply data/migrations/*.sql in order (0001-0010) against $DATABASE_URL
 # (docker-compose.yml also auto-applies them for a fresh volume)
 
 pnpm install                 # installs apps/*, packages/contracts, packages/config,

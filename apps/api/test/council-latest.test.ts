@@ -22,7 +22,8 @@ describe("getLatestCouncilNarratives", () => {
             sizing_adjustment: null,
             final_stance: "SUPPORT",
             weighted_score: 1.0,
-            narrative: "some broker narrative text",
+            narrative_en: "some broker narrative text",
+            narrative_es: "algún texto narrativo del bróker",
             timestamp: "2026-08-19T00:00:00Z",
           },
         ];
@@ -33,7 +34,8 @@ describe("getLatestCouncilNarratives", () => {
     const [narrative] = await getLatestCouncilNarratives(pool, ["BTC-USDT"]);
     expect(narrative?.symbol).toBe("BTC-USDT");
     expect(narrative?.strategyId).toBe("trend_following_sma_v1");
-    expect(narrative?.narrative).toBe("some broker narrative text");
+    expect(narrative?.narrativeEn).toBe("some broker narrative text");
+    expect(narrative?.narrativeEs).toBe("algún texto narrativo del bróker");
     expect(narrative?.decision).toBe("APPROVE");
   });
 

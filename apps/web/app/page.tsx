@@ -1,18 +1,24 @@
+"use client";
+
 import AuthGate from "./AuthGate";
 import BrokerNarrativeCard from "./BrokerNarrativeCard";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useLocale } from "./LocaleProvider";
 import MarketDashboard from "./MarketDashboard";
 
 export default function HomePage() {
+  const { t } = useLocale();
+
   return (
     <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem", maxWidth: 720 }}>
-      <h1>QMI — Phase 1</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <h1>QMI — Phase 1</h1>
+        <LanguageSwitcher />
+      </div>
+      <p>{t("page.description")}</p>
       <p>
-        Live BTC/ETH spot prices from Binance only. No strategies, risk decisions, or
-        execution capability exist yet.
-      </p>
-      <p>
-        See <code>docs/architecture/QMI-MASTER-ARCHITECTURE.md</code> for the target
-        architecture and development phases.
+        {t("page.docsIntro")} <code>docs/architecture/QMI-MASTER-ARCHITECTURE.md</code>{" "}
+        {t("page.docsOutro")}
       </p>
       <AuthGate>
         <MarketDashboard />

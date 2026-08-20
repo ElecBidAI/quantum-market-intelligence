@@ -2,6 +2,8 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { apiFetch } from "../lib/api-client";
+import { decisionLabel, regimeLabel, stanceLabel } from "../lib/i18n";
+import { useLocale } from "./LocaleProvider";
 
 const SYMBOLS = ["BTC-USDT", "ETH-USDT"] as const;
 
@@ -12,7 +14,8 @@ interface CouncilNarrative {
   regimeConfidence: number;
   decision: "APPROVE" | "REDUCE" | "REJECT" | null;
   finalStance: "SUPPORT" | "OPPOSE" | "NEUTRAL" | "VETO" | null;
-  narrative: string;
+  narrativeEn: string;
+  narrativeEs: string;
   timestamp: string;
 }
 
@@ -25,6 +28,7 @@ interface CouncilNarrative {
  * bullish/bearish coloring).
  */
 export default function BrokerNarrativeCard() {
+  const { locale, t } = useLocale();
   const [narratives, setNarratives] = useState<CouncilNarrative[] | null>(null);
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
 
@@ -52,38 +56,45 @@ export default function BrokerNarrativeCard() {
 
   return (
     <section style={{ marginTop: "2rem" }}>
-      <h2>Broker narrative</h2>
-      <p style={{ color: "#666", fontSize: "0.9rem" }}>
-        This note explains a rule-based analysis already produced by risk_engine and
-        ai_council — nothing on this page places, sizes, or executes a trade.
-      </p>
+      <h2>{t("narrative.heading")}</h2>
+      <p style={{ color: "#666", fontSize: "0.9rem" }}>{t("narrative.framing")}</p>
 
-      {status === "loading" && <p>Loading…</p>}
-      {status === "error" && <p>Could not load a narrative right now.</p>}
+      {status === "loading" && <p>{t("narrative.loading")}</p>}
+      {status === "error" && <p>{t("narrative.error")}</p>}
       {status === "loaded" && narratives?.length === 0 && (
-        <p style={{ color: "#666" }}>No narrative has been generated yet for these symbols.</p>
+        <p style={{ color: "#666" }}>{t("narrative.empty")}</p>
       )}
 
-      {narratives?.map((item) => (
-        <article key={item.symbol} style={cardStyle}>
-          <header style={{ marginBottom: "0.5rem" }}>
-            <strong>{item.symbol}</strong>
-            <span style={metaStyle}>
-              {" "}
-              — regime {item.regime} ({(item.regimeConfidence * 100).toFixed(0)}% confidence)
-              {item.strategyId ? `, strategy ${item.strategyId}` : ""}
-              {item.decision ? `, risk decision ${item.decision}` : ""}
-              {item.finalStance ? `, council ${item.finalStance}` : ""}
-            </span>
-          </header>
-          {item.narrative.split("\n\n").map((paragraph, i, all) => (
-            <p key={i} style={i === all.length - 1 ? disclaimerStyle : paragraphStyle}>
-              {paragraph}
+      {narratives?.map((item) => {
+        const narrative = locale === "es" ? item.narrativeEs : item.narrativeEn;
+        return (
+          <article key={item.symbol} style={cardStyle}>
+            <header style={{ marginBottom: "0.5rem" }}>
+              <strong>{item.symbol}</strong>
+              <span style={metaStyle}>
+                {" "}
+                — {t("narrative.regimeLabel")} {regimeLabel(locale, item.regime)} (
+                {(item.regimeConfidence * 100).toFixed(0)}% {t("narrative.confidenceSuffix")})
+                {item.strategyId ? `, ${t("narrative.strategyLabel")} ${item.strategyId}` : ""}
+                {item.decision
+                  ? `, ${t("narrative.decisionLabel")} ${decisionLabel(locale, item.decision)}`
+                  : ""}
+                {item.finalStance
+                  ? `, ${t("narrative.councilLabel")} ${stanceLabel(locale, item.finalStance)}`
+                  : ""}
+              </span>
+            </header>
+            {narrative.split("\n\n").map((paragraph, i, all) => (
+              <p key={i} style={i === all.length - 1 ? disclaimerStyle : paragraphStyle}>
+                {paragraph}
+              </p>
+            ))}
+            <p style={timestampStyle}>
+              {t("narrative.generatedAtPrefix")} {item.timestamp} {t("narrative.generatedAtSuffix")}
             </p>
-          ))}
-          <p style={timestampStyle}>Generated from data as of {item.timestamp} (UTC).</p>
-        </article>
-      ))}
+          </article>
+        );
+      })}
     </section>
   );
 }

@@ -3,9 +3,11 @@
 import { useState, type CSSProperties, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../lib/api-client";
+import { useLocale } from "../LocaleProvider";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export default function LoginPage() {
       if (res.ok) {
         router.push("/");
       } else {
-        setError("Invalid email or password.");
+        setError(t("login.error"));
       }
     } finally {
       setSubmitting(false);
@@ -33,10 +35,10 @@ export default function LoginPage() {
 
   return (
     <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem", maxWidth: 360 }}>
-      <h1>Log in</h1>
+      <h1>{t("login.heading")}</h1>
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
         <label>
-          Email
+          {t("login.email")}
           <input
             type="email"
             required
@@ -46,7 +48,7 @@ export default function LoginPage() {
           />
         </label>
         <label>
-          Password
+          {t("login.password")}
           <input
             type="password"
             required
@@ -57,11 +59,11 @@ export default function LoginPage() {
         </label>
         {error && <p style={{ color: "#b00020" }}>{error}</p>}
         <button type="submit" disabled={submitting}>
-          {submitting ? "Logging in…" : "Log in"}
+          {submitting ? t("login.submitting") : t("login.submit")}
         </button>
       </form>
       <p>
-        No account? <a href="/register">Register</a>
+        {t("login.noAccount")} <a href="/register">{t("login.registerLink")}</a>
       </p>
     </main>
   );

@@ -10,8 +10,13 @@ DEMO/PLACEHOLDER NOTICE: the sizing and risk figures in every generated
 narrative assume a fixed $100,000 paper `PortfolioState` and default
 `RiskLimits()` — there is no real portfolio-engine wiring yet, so this is
 not, and must never be read as, any user's actual account. `narrator.py`'s
-`DISCLAIMER` restates this in every narrative it produces; this notice is
-the source-of-truth for *why* that sentence exists.
+`DISCLAIMER_EN`/`DISCLAIMER_ES` restate this in every narrative produced;
+this notice is the source-of-truth for *why* that sentence exists.
+
+Every symbol gets **both** an English and a Spanish narrative, rendered
+from the same pipeline run (`narrator.generate_narrative` is called twice,
+once per language, against the same regime/candidate/decision/opinions/
+thesis — the pipeline itself never runs twice).
 
 This is the first thing in this repository that runs the full
 regime->strategy->risk->council chain against real Postgres-ingested bars
@@ -87,7 +92,12 @@ def run(database_url: str) -> None:
             candidate = _pick_candidate(candidates)
 
             if candidate is None:
-                narrative = generate_narrative(symbol, regime, None, None, [], None)
+                narrative_en = generate_narrative(
+                    symbol, regime, None, None, [], None, language="en"
+                )
+                narrative_es = generate_narrative(
+                    symbol, regime, None, None, [], None, language="es"
+                )
                 insert_narrative(
                     cursor,
                     symbol=symbol,
@@ -98,7 +108,8 @@ def run(database_url: str) -> None:
                     sizing_adjustment=None,
                     final_stance=None,
                     weighted_score=None,
-                    narrative=narrative,
+                    narrative_en=narrative_en,
+                    narrative_es=narrative_es,
                     candidate=None,
                     risk_decision=None,
                     opinions=None,
@@ -112,14 +123,26 @@ def run(database_url: str) -> None:
             context = CouncilContext(candidate=candidate, regime=regime, risk_decision=decision)
             opinions = run_council(AGENTS, context)
             thesis = synthesize(opinions)
-            narrative = generate_narrative(
+            pool_size = len(candidates)
+            narrative_en = generate_narrative(
                 symbol,
                 regime,
                 candidate,
                 decision,
                 opinions,
                 thesis,
-                candidate_pool_size=len(candidates),
+                candidate_pool_size=pool_size,
+                language="en",
+            )
+            narrative_es = generate_narrative(
+                symbol,
+                regime,
+                candidate,
+                decision,
+                opinions,
+                thesis,
+                candidate_pool_size=pool_size,
+                language="es",
             )
 
             insert_narrative(
@@ -132,7 +155,8 @@ def run(database_url: str) -> None:
                 sizing_adjustment=decision["sizingAdjustment"],
                 final_stance=thesis.final_stance,
                 weighted_score=thesis.weighted_score,
-                narrative=narrative,
+                narrative_en=narrative_en,
+                narrative_es=narrative_es,
                 candidate=dict(candidate),
                 risk_decision=decision,
                 opinions=[asdict(o) for o in opinions],
