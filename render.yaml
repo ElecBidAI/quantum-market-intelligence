@@ -46,6 +46,7 @@ services:
       - key: REDIS_URL
         fromService:
           name: qmi-redis
+          type: keyvalue
           property: connectionString
       # DATABASE_URL deliberately absent for now — see the header comment.
       # Add it back (sync: false) once qmi-postgres exists.
@@ -110,6 +111,7 @@ services:
   #     - key: REDIS_URL
   #       fromService:
   #         name: qmi-redis
+  #         type: keyvalue
   #         property: connectionString
   #
   # --- Python batch jobs: deliberately one-shot scripts (see each
