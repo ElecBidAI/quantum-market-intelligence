@@ -9,6 +9,13 @@
 # why), so Render has no built-in way to hand its connection string to
 # other services automatically. Fill it in once after qmi-postgres's first
 # deploy — see docs/deployment/RENDER-DEPLOYMENT.md.
+#
+# Cost: qmi-api, qmi-web, and qmi-redis run on Render's free plan (web
+# services and Key Value are the only types Render currently offers a free
+# tier for). qmi-postgres (private service + disk), qmi-market-data
+# (background worker), and the two cron jobs have no free option on Render
+# at all — those four require a card on file and cost money every month
+# regardless of how little they're used.
 
 services:
   # --- Data stores ---
@@ -33,7 +40,7 @@ services:
 
   - type: keyvalue
     name: qmi-redis
-    plan: starter
+    plan: free # in-memory only, lost on restart — fine here, it's only a pub/sub relay
     ipAllowList: [] # no public access; only other services in this Blueprint reach it
 
   # --- apps/api: gateway / auth / orchestration ---
@@ -41,7 +48,7 @@ services:
   - type: web
     name: qmi-api
     runtime: node
-    plan: starter
+    plan: free # spins down after ~15min idle; wakes on the next request in a few seconds
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build:packages && pnpm --filter @qmi/api run build
     startCommand: pnpm --filter @qmi/api run start
     envVars:
@@ -77,7 +84,7 @@ services:
   - type: web
     name: qmi-web
     runtime: node
-    plan: starter
+    plan: free # spins down after ~15min idle; wakes on the next request in a few seconds
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build:packages && pnpm --filter @qmi/web run build
     # Next.js's `next start` doesn't read Render's $PORT on its own; passed
     # through explicitly. NEXT_PUBLIC_API_URL is inlined at *build* time

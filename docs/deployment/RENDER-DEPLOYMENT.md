@@ -39,15 +39,22 @@ git push -u origin master
    `qmi-api`, `qmi-web`, `qmi-market-data`, `qmi-run-pipeline`,
    `qmi-research-runner`) and click **Apply**.
 
-Every service on `plan: starter` costs money once Render's free trial
-credit runs out (roughly $7/service/month at the time this was written —
-confirm current pricing in Render's dashboard before applying). To spend
-nothing: `qmi-api` and `qmi-web` can run on Render's free web-service tier
-(it spins down after ~15 minutes idle and takes a few seconds to wake back
-up on the next request — fine for occasionally checking the dashboard, not
-for something you want always-on). `qmi-market-data` genuinely needs to
-stay running continuously to ingest real bars, so it can't meaningfully run
-on a tier that spins down.
+`render.yaml` already uses Render's free plan everywhere Render actually
+offers one: `qmi-api`, `qmi-web` (free web services — spin down after
+~15 minutes idle, wake in a few seconds on the next request) and
+`qmi-redis` (free Key Value — in-memory only, fine here since it's only a
+pub/sub relay, nothing persisted).
+
+**Render has no free tier at all for the other four** — `qmi-postgres`
+(private service + disk), `qmi-market-data` (background worker),
+`qmi-run-pipeline`, `qmi-research-runner` (cron jobs). Applying this
+Blueprint will ask for a card before creating those, and each costs money
+every month on Render's cheapest ("starter") plan regardless of how little
+it's used (confirm current pricing in Render's dashboard/billing page
+before applying — it changes). There's no way around this for
+`qmi-postgres` specifically: it needs the TimescaleDB extension, which
+only exists on a paid, self-hosted instance here, never on Render's free
+managed Postgres.
 
 ## 3. Wire up DATABASE_URL manually
 
