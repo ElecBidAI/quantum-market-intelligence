@@ -127,6 +127,22 @@ const STRINGS = {
     "orderbook.sizeCol": "Size",
 
     "watchlist.heading": "Watchlist",
+
+    "research.heading": "Strategy research",
+    "research.framing":
+      "Real backtests of every live strategy against ingested price history (services/backtester) — how each strategy has actually performed, not its own self-reported estimate.",
+    "research.loading": "Loading…",
+    "research.error": "Could not load backtest results right now.",
+    "research.empty": "No backtest has been run yet for these symbols.",
+    "research.strategyLabel": "Strategy",
+    "research.sharpeLabel": "Sharpe",
+    "research.winRateLabel": "Win rate",
+    "research.totalReturnLabel": "Total return",
+    "research.tradesLabel": "Trades",
+    "research.sampleLabel": "Sample",
+    "research.notEnoughData": "Not enough data yet",
+    "research.smallSampleWarning":
+      "Small sample — not yet a statistically meaningful result. Improves automatically as more real history accumulates.",
   },
   es: {
     "page.description":
@@ -248,6 +264,22 @@ const STRINGS = {
     "orderbook.sizeCol": "Tamaño",
 
     "watchlist.heading": "Lista de seguimiento",
+
+    "research.heading": "Investigación de estrategias",
+    "research.framing":
+      "Backtests reales de cada estrategia en vivo contra el histórico de precios ingerido (services/backtester) — cómo se ha desempeñado realmente cada estrategia, no su propia estimación autoreportada.",
+    "research.loading": "Cargando…",
+    "research.error": "No se pudieron cargar los resultados de backtest en este momento.",
+    "research.empty": "Aún no se ha corrido ningún backtest para estos símbolos.",
+    "research.strategyLabel": "Estrategia",
+    "research.sharpeLabel": "Sharpe",
+    "research.winRateLabel": "Tasa de acierto",
+    "research.totalReturnLabel": "Retorno total",
+    "research.tradesLabel": "Operaciones",
+    "research.sampleLabel": "Muestra",
+    "research.notEnoughData": "Aún no hay suficientes datos",
+    "research.smallSampleWarning":
+      "Muestra pequeña — todavía no es un resultado estadísticamente significativo. Mejora automáticamente a medida que se acumula más histórico real.",
   },
 } as const satisfies Record<Locale, Record<string, string>>;
 

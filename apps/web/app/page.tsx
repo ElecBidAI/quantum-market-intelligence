@@ -11,6 +11,7 @@ import OrderBookPanel from "./OrderBookPanel";
 import PaperTradingCard from "./PaperTradingCard";
 import PriceChart from "./PriceChart";
 import SignalsCard from "./SignalsCard";
+import StrategyResearchCard from "./StrategyResearchCard";
 import { THEME, FONT_FAMILY } from "../lib/theme";
 
 const SYMBOLS = ["BTC-USDT", "ETH-USDT"] as const;
@@ -54,6 +55,9 @@ export default function HomePage() {
           </div>
           <div style={panelStyle}>
             <DerivativesCard />
+          </div>
+          <div style={panelStyle}>
+            <StrategyResearchCard />
           </div>
         </div>
 

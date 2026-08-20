@@ -63,7 +63,8 @@ export type Feature =
   | "market-data:read"
   | "council-narrative:read"
   | "strategy-signals:read"
-  | "paper-trading:read";
+  | "paper-trading:read"
+  | "research:read";
 
 /**
  * Plan -> feature map. All three plans currently grant every feature
@@ -76,6 +77,7 @@ const ALL_FEATURES: Feature[] = [
   "council-narrative:read",
   "strategy-signals:read",
   "paper-trading:read",
+  "research:read",
 ];
 
 export const ENTITLEMENTS: Record<Plan, ReadonlySet<Feature>> = {

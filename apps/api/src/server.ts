@@ -30,6 +30,7 @@ async function main(): Promise<void> {
     deps.derivatives = { pool };
     deps.signals = { pool };
     deps.paperTrading = { pool };
+    deps.research = { pool };
 
     if (env.AUTH_ENCRYPTION_KEY) {
       deps.sso = {

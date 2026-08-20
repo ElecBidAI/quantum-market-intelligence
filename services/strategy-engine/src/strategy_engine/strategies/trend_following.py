@@ -7,10 +7,13 @@ produces no candidate, since that's a conflicting signal, not a confirming
 one.
 
 `expected_edge` is a naive placeholder (the SMA spread itself, as a
-fraction) — not a backtested estimate. A real edge estimate would come from
-running this exact strategy through `services/backtester` over historical
-data; this repository has that capability (Phase 4) but nothing wires a
-strategy's live candidate generation to its own backtested track record yet.
+fraction) — not a backtested estimate, and it's only actually used to pick
+between candidates when none of them has a real backtested track record
+yet. `backtester.research_runner` runs this exact strategy through
+`services/backtester` over real ingested history and persists real
+performance metrics (Sharpe, win rate, etc.) to `backtests`; once that's
+run for a (strategy, symbol) pair, `ai_council.run_pipeline._pick_candidate`
+prefers that real, positive backtested Sharpe over this placeholder number.
 """
 
 from __future__ import annotations

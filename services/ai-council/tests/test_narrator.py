@@ -63,6 +63,33 @@ def test_multi_candidate_disclosure(
 
 
 @pytest.mark.parametrize("language", LANGUAGES)
+def test_multi_candidate_disclosure_when_selection_used_a_real_backtested_sharpe(
+    make_candidate, make_regime, approve_decision, make_thesis, language
+):
+    candidate = make_candidate(expectedEdge=0.01)  # low self-reported edge, doesn't matter here
+    thesis = make_thesis()
+    narrative = generate_narrative(
+        "BTC-USDT",
+        make_regime(),
+        candidate,
+        approve_decision(),
+        thesis.opinions,
+        thesis,
+        candidate_pool_size=3,
+        backtested_sharpe=1.75,
+        language=language,
+    )
+    if language == "es":
+        assert "mejor desempeño real en backtesting" in narrative
+        assert "Sharpe 1.75" in narrative
+        assert "seleccionado por tener el mayor margen esperado" not in narrative
+    else:
+        assert "best real backtested track record" in narrative
+        assert "Sharpe 1.75" in narrative
+        assert "selected because it had the highest expected edge" not in narrative
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
 def test_reject_branch(make_candidate, make_regime, reject_decision, make_thesis, language):
     decision = reject_decision()
     reason = decision["reasons"][0]

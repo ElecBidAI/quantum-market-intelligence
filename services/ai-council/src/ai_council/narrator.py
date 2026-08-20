@@ -215,7 +215,28 @@ def _no_candidate_paragraph(symbol: str, regime: RegimeResult, language: Languag
     )
 
 
-def _multi_candidate_paragraph(candidate: dict, pool_size: int, language: Language) -> str:
+def _multi_candidate_paragraph(
+    candidate: dict, pool_size: int, language: Language, backtested_sharpe: float | None = None
+) -> str:
+    if backtested_sharpe is not None:
+        if language == "es":
+            return (
+                f"{pool_size} estrategias generaron candidatos para {candidate['symbol']} "
+                f"en este régimen de {_regime_es(candidate['regime'])}; esta nota cubre "
+                f"{candidate['strategyId']} (dirección {_direction_es(candidate['direction'])}), "
+                f"seleccionado por tener el mejor desempeño real en backtesting entre ellos "
+                f"(Sharpe {backtested_sharpe:.2f} sobre su histórico real ingerido, no solo "
+                f"su margen esperado autoreportado). Los demás no se discuten aquí."
+            )
+        return (
+            f"{pool_size} strategies generated candidates for {candidate['symbol']} in "
+            f"this {candidate['regime']} regime; this note covers {candidate['strategyId']} "
+            f"(direction {candidate['direction']}), selected for having the best real "
+            f"backtested track record among them (Sharpe {backtested_sharpe:.2f} over its "
+            f"real ingested history, not just its own self-reported expected edge). The "
+            f"others are not discussed here."
+        )
+
     if language == "es":
         return (
             f"{pool_size} estrategias generaron candidatos para {candidate['symbol']} "
@@ -434,6 +455,7 @@ def generate_narrative(
     thesis: ChiefIntelligenceThesis | None,
     *,
     candidate_pool_size: int = 1,
+    backtested_sharpe: float | None = None,
     language: Language = "en",
 ) -> str:
     """Renders a broker-voice explanation of an already-made decision.
@@ -444,6 +466,14 @@ def generate_narrative(
     Whenever a candidate is given, `risk_decision` and `thesis` must be
     given too (the caller has already run the real pipeline); this raises
     rather than silently guessing at a decision that was never made.
+
+    `backtested_sharpe`: when `run_pipeline._pick_candidate` chose this
+    candidate because of its real backtested track record rather than its
+    own self-reported `expectedEdge`, that Sharpe ratio — disclosed in the
+    multi-candidate selection sentence below, same "the pick is disclosed,
+    never silent" principle `candidate_pool_size` already follows. `None`
+    when the pick fell back to `expectedEdge` (no positive backtested
+    Sharpe existed for any candidate in the pool yet).
 
     `language` only changes prose — see the module docstring for what
     stays untranslated (reason/finding `detail` strings) and what's
@@ -458,7 +488,9 @@ def generate_narrative(
 
     paragraphs: list[str] = []
     if candidate_pool_size > 1:
-        paragraphs.append(_multi_candidate_paragraph(candidate, candidate_pool_size, language))
+        paragraphs.append(
+            _multi_candidate_paragraph(candidate, candidate_pool_size, language, backtested_sharpe)
+        )
 
     paragraphs.append(_opening_paragraph(symbol, regime, candidate, language))
     plan_sentence = _entry_stop_target_sentence(candidate, language)

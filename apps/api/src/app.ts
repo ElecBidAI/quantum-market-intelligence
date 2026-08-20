@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { createLogger } from "@qmi/observability";
 import { protect } from "./entitlements.js";
 import { type AuthRouteDeps, registerAuthRoutes } from "./routes/auth.js";
+import { type BacktestsRouteDeps, registerBacktestsRoutes } from "./routes/backtests.js";
 import { type CouncilRouteDeps, registerCouncilRoutes } from "./routes/council.js";
 import { type DerivativesRouteDeps, registerDerivativesRoutes } from "./routes/derivatives.js";
 import { type MarketRouteDeps, registerMarketRoutes } from "./routes/market.js";
@@ -25,6 +26,8 @@ export interface AppDeps {
   signals?: SignalsRouteDeps;
   /** Required for /paper-trading/latest — see routes/paper-trading.ts. */
   paperTrading?: PaperTradingRouteDeps;
+  /** Required for /research/backtests — see routes/backtests.ts. */
+  research?: BacktestsRouteDeps;
 }
 
 /**
@@ -83,6 +86,10 @@ export function buildApp(deps: AppDeps = {}): FastifyInstance {
 
   if (deps.paperTrading && deps.auth) {
     registerPaperTradingRoutes(app, deps.paperTrading, protect(deps.auth, "paper-trading:read"));
+  }
+
+  if (deps.research && deps.auth) {
+    registerBacktestsRoutes(app, deps.research, protect(deps.auth, "research:read"));
   }
 
   return app;

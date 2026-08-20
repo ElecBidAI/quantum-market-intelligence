@@ -167,6 +167,32 @@ def insert_risk_decision(cursor: Cursor, decision: dict, symbol: str) -> None:
     )
 
 
+def fetch_latest_backtest_metrics(
+    cursor: Cursor, strategy_id: str, symbol: str
+) -> dict[str, object] | None:
+    """Reads the latest `backtests.metrics` JSONB for one (strategy, symbol)
+    pair (data/migrations/0004_backtests.sql, written by
+    `python -m backtester.research_runner`). `None` if that pair hasn't
+    been backtested yet — an honest "no track record yet," not a
+    fabricated zero — see `run_pipeline._pick_candidate`, the only caller,
+    for how that's handled."""
+    cursor.execute(
+        """
+        SELECT metrics
+        FROM backtests
+        WHERE strategy_id = %s AND symbol = %s
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        (strategy_id, symbol),
+    )
+    row = cursor.fetchall()
+    if not row:
+        return None
+    metrics = row[0][0]
+    return metrics if isinstance(metrics, dict) else json.loads(metrics)
+
+
 def fetch_all_fills(cursor: Cursor) -> list[Fill]:
     """Fetches every fill ever recorded, oldest first — the full ledger
     `paper_execution.positions.replay_positions` needs to reconstruct the

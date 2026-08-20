@@ -77,6 +77,7 @@ from ai_council.context import CouncilContext
 from ai_council.council import run_council, synthesize
 from ai_council.db import (
     fetch_all_fills,
+    fetch_latest_backtest_metrics,
     fetch_recent_ohlcv,
     insert_narrative,
     insert_risk_decision,
@@ -103,13 +104,47 @@ MARKET = MarketContext(spread_bps=5.0, data_age_seconds=1.0)
 FILL_SIMULATOR = FillSimulator(spread_bps=5.0, slippage_bps=5.0)
 
 
-def _pick_candidate(candidates: list[dict]) -> dict | None:
-    """Highest expectedEdge wins; ties broken by strategyId ascending. Callers
-    (narrator.generate_narrative via candidate_pool_size) are told how many
-    candidates existed, so this pick is disclosed, never silent."""
+def _pick_candidate(candidates: list[dict], cursor) -> tuple[dict | None, float | None]:
+    """Picks the winning candidate and, if a real backtested track record
+    drove that pick, the Sharpe ratio that did it.
+
+    A candidate whose (strategyId, symbol) pair has a real backtest
+    (`backtester.research_runner`, `data/migrations/0004_backtests.sql`)
+    with a positive Sharpe always outranks one that doesn't — a proven real
+    track record beats a strategy's own self-reported `expectedEdge`. Among
+    candidates that qualify, the higher real Sharpe wins. Everything else
+    (no backtest yet for that pair, or a non-positive one) falls back to
+    the original `expectedEdge` ordering — an honest bootstrap: a
+    strategy/symbol pair `research_runner` hasn't scored yet is never
+    unfairly penalized for that.
+
+    Returns `(None, None)` for no candidates. Otherwise `(winner,
+    backtested_sharpe)`, where `backtested_sharpe` is `None` unless that
+    specific Sharpe number is what won the pick — callers
+    (narrator.generate_narrative via candidate_pool_size /
+    backtested_sharpe) are told this so the pick is disclosed, never
+    silent, same principle as the previous expectedEdge-only version."""
     if not candidates:
-        return None
-    return sorted(candidates, key=lambda c: (-c["expectedEdge"], c["strategyId"]))[0]
+        return None, None
+
+    scored: list[tuple[dict, float | None, bool]] = []
+    for candidate in candidates:
+        metrics = fetch_latest_backtest_metrics(
+            cursor, candidate["strategyId"], candidate["symbol"]
+        )
+        sharpe = metrics.get("sharpeRatio") if metrics else None
+        backtested = isinstance(sharpe, (int, float)) and sharpe > 0
+        scored.append((candidate, sharpe if backtested else None, backtested))
+
+    def sort_key(item: tuple[dict, float | None, bool]) -> tuple[int, float, str]:
+        candidate, sharpe, backtested = item
+        if backtested:
+            return (0, -sharpe, candidate["strategyId"])
+        return (1, -candidate["expectedEdge"], candidate["strategyId"])
+
+    scored.sort(key=sort_key)
+    winner, winner_sharpe, _ = scored[0]
+    return winner, winner_sharpe
 
 
 def run(database_url: str) -> None:
@@ -127,7 +162,7 @@ def run(database_url: str) -> None:
 
             regime = classify_regime(bars, THRESHOLDS)
             candidates = run_strategies(STRATEGIES, bars, regime, symbol, venue="binance")
-            candidate = _pick_candidate(candidates)
+            candidate, backtested_sharpe = _pick_candidate(candidates, cursor)
 
             if candidate is None:
                 narrative_en = generate_narrative(
@@ -179,6 +214,7 @@ def run(database_url: str) -> None:
                 opinions,
                 thesis,
                 candidate_pool_size=pool_size,
+                backtested_sharpe=backtested_sharpe,
                 language="en",
             )
             narrative_es = generate_narrative(
@@ -189,6 +225,7 @@ def run(database_url: str) -> None:
                 opinions,
                 thesis,
                 candidate_pool_size=pool_size,
+                backtested_sharpe=backtested_sharpe,
                 language="es",
             )
 
