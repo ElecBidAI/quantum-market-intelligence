@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { apiFetch } from "../lib/api-client";
 import { decisionLabel, directionLabel } from "../lib/i18n";
+import { THEME } from "../lib/theme";
 import { useLocale } from "./LocaleProvider";
 
 interface PortfolioSnapshot {
@@ -67,13 +68,13 @@ export default function PaperTradingCard() {
   const positions = snapshot ? Object.entries(snapshot.positions) : [];
 
   return (
-    <section style={{ marginTop: "2rem" }}>
-      <h2>{t("paperTrading.heading")}</h2>
-      <p style={{ color: "#666", fontSize: "0.9rem" }}>{t("paperTrading.framing")}</p>
+    <section>
+      <h2 style={headingStyle}>{t("paperTrading.heading")}</h2>
+      <p style={framingStyle}>{t("paperTrading.framing")}</p>
 
-      {status === "loading" && <p>{t("paperTrading.loading")}</p>}
-      {status === "error" && <p>{t("paperTrading.error")}</p>}
-      {status === "loaded" && !snapshot && <p style={{ color: "#666" }}>{t("paperTrading.empty")}</p>}
+      {status === "loading" && <p style={mutedStyle}>{t("paperTrading.loading")}</p>}
+      {status === "error" && <p style={mutedStyle}>{t("paperTrading.error")}</p>}
+      {status === "loaded" && !snapshot && <p style={mutedStyle}>{t("paperTrading.empty")}</p>}
 
       {snapshot && (
         <>
@@ -104,14 +105,14 @@ export default function PaperTradingCard() {
 
           <h3 style={subheadingStyle}>{t("paperTrading.positionsHeading")}</h3>
           {positions.length === 0 ? (
-            <p style={{ color: "#666" }}>{t("paperTrading.noPositions")}</p>
+            <p style={mutedStyle}>{t("paperTrading.noPositions")}</p>
           ) : (
-            <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: 560, marginBottom: "1rem" }}>
+            <table style={{ borderCollapse: "collapse", width: "100%", marginBottom: "1rem" }}>
               <thead>
                 <tr>
-                  <th style={cellStyle}>{t("dashboard.colSymbol")}</th>
-                  <th style={cellStyle}>{t("paperTrading.netSizeLabel")}</th>
-                  <th style={cellStyle}>{t("paperTrading.avgEntryLabel")}</th>
+                  <th style={headerCellStyle}>{t("dashboard.colSymbol")}</th>
+                  <th style={headerCellStyle}>{t("paperTrading.netSizeLabel")}</th>
+                  <th style={headerCellStyle}>{t("paperTrading.avgEntryLabel")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -128,16 +129,16 @@ export default function PaperTradingCard() {
 
           <h3 style={subheadingStyle}>{t("paperTrading.recentOrdersHeading")}</h3>
           {recentOrders.length === 0 ? (
-            <p style={{ color: "#666" }}>{t("paperTrading.noOrders")}</p>
+            <p style={mutedStyle}>{t("paperTrading.noOrders")}</p>
           ) : (
-            <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: 640 }}>
+            <table style={{ borderCollapse: "collapse", width: "100%" }}>
               <thead>
                 <tr>
-                  <th style={cellStyle}>{t("dashboard.colSymbol")}</th>
-                  <th style={cellStyle}>{t("signals.directionLabel")}</th>
-                  <th style={cellStyle}>{t("signals.riskDecisionLabel")}</th>
-                  <th style={cellStyle}>{t("paperTrading.netSizeLabel")}</th>
-                  <th style={cellStyle}>{t("dashboard.colPrice")}</th>
+                  <th style={headerCellStyle}>{t("dashboard.colSymbol")}</th>
+                  <th style={headerCellStyle}>{t("signals.directionLabel")}</th>
+                  <th style={headerCellStyle}>{t("signals.riskDecisionLabel")}</th>
+                  <th style={headerCellStyle}>{t("paperTrading.netSizeLabel")}</th>
+                  <th style={headerCellStyle}>{t("dashboard.colPrice")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -159,13 +160,34 @@ export default function PaperTradingCard() {
   );
 }
 
+const headingStyle: CSSProperties = { color: THEME.textPrimary, fontSize: "1.1rem", margin: "0 0 0.35rem" };
+
+const framingStyle: CSSProperties = { color: THEME.textSecondary, fontSize: "0.85rem" };
+
+const mutedStyle: CSSProperties = { color: THEME.textSecondary };
+
 const cellStyle: CSSProperties = {
-  border: "1px solid #ddd",
+  borderBottom: `1px solid ${THEME.border}`,
   padding: "0.3rem 0.6rem",
   textAlign: "left",
+  color: THEME.textPrimary,
   fontVariantNumeric: "tabular-nums",
 };
 
-const labelCellStyle: CSSProperties = { padding: "0.15rem 0.5rem 0.15rem 0", textAlign: "left", color: "#666" };
+const headerCellStyle: CSSProperties = {
+  borderBottom: `1px solid ${THEME.border}`,
+  padding: "0.3rem 0.6rem",
+  textAlign: "left",
+  color: THEME.textMuted,
+  fontWeight: 400,
+  fontSize: "0.85rem",
+};
 
-const subheadingStyle: CSSProperties = { fontSize: "1rem", marginTop: "1rem", marginBottom: "0.5rem" };
+const labelCellStyle: CSSProperties = { padding: "0.15rem 0.5rem 0.15rem 0", textAlign: "left", color: THEME.textMuted };
+
+const subheadingStyle: CSSProperties = {
+  fontSize: "1rem",
+  marginTop: "1rem",
+  marginBottom: "0.5rem",
+  color: THEME.textPrimary,
+};

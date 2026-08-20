@@ -1,6 +1,8 @@
 import type { FastifyInstance, preHandlerHookHandler } from "fastify";
+import { getOhlcvHistory } from "../market-history.js";
 import { getLatestMarketState, type QueryablePool } from "../market-latest.js";
 import { buildSymbolChannels, type PubSub } from "../market-stream.js";
+import { getLatestOrderBook } from "../orderbook-latest.js";
 
 /**
  * Phase 1 universe (docs/architecture/QMI-MASTER-ARCHITECTURE.md). Kept as
@@ -24,6 +26,18 @@ function parseSymbols(raw: unknown): string[] {
   return requested.length > 0 ? requested : [...DEFAULT_SYMBOLS];
 }
 
+function parseSingleSymbol(raw: unknown): string {
+  if (typeof raw === "string" && (DEFAULT_SYMBOLS as readonly string[]).includes(raw)) return raw;
+  return DEFAULT_SYMBOLS[0];
+}
+
+const DEFAULT_HISTORY_LIMIT = 200;
+
+function parseLimit(raw: unknown): number {
+  const parsed = typeof raw === "string" ? Number.parseInt(raw, 10) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_HISTORY_LIMIT;
+}
+
 /**
  * Registers:
  *   GET /market/latest?symbols=BTC-USDT,ETH-USDT — last known trade/bar per
@@ -32,8 +46,17 @@ function parseSymbols(raw: unknown): string[] {
  *     relaying whatever services/market-data publishes to Redis. Never
  *     synthesizes data: if nothing has been published yet, the client just
  *     receives no events until something real arrives.
+ *   GET /market/history?symbol=BTC-USDT&interval=1m&limit=200 — up to
+ *     `limit` (capped at market-history.ts's MAX_HISTORY_LIMIT) closed
+ *     bars for one symbol, oldest first — for apps/web's PriceChart to
+ *     seed a candlestick series before live updates take over via
+ *     /stream/market.
+ *   GET /market/orderbook?symbol=BTC-USDT — the latest top-of-book
+ *     snapshot (`orderbook_snapshots`, ingested by services/market-data's
+ *     `@depth20@100ms` stream). `orderBook: null` if nothing's been
+ *     ingested yet for that symbol.
  *
- * Both routes require `preHandler` (an authenticated session with the
+ * All four routes require `preHandler` (an authenticated session with the
  * `market-data:read` entitlement — see entitlements.ts's `protect()`,
  * built and passed in by app.ts). This module deliberately doesn't import
  * entitlements.ts itself, so a route module never has direct access to more
@@ -72,5 +95,20 @@ export function registerMarketRoutes(
     request.raw.on("close", () => {
       void Promise.all(channels.map((c) => deps.pubsub.unsubscribe(c.channel)));
     });
+  });
+
+  app.get("/market/history", { preHandler }, async (request) => {
+    const query = request.query as Record<string, unknown>;
+    const symbol = parseSingleSymbol(query.symbol);
+    const interval = typeof query.interval === "string" && query.interval.length > 0 ? query.interval : "1m";
+    const limit = parseLimit(query.limit);
+    const bars = await getOhlcvHistory(deps.pool, symbol, interval, limit);
+    return { symbol, interval, bars };
+  });
+
+  app.get("/market/orderbook", { preHandler }, async (request) => {
+    const symbol = parseSingleSymbol((request.query as Record<string, unknown>).symbol);
+    const orderBook = await getLatestOrderBook(deps.pool, symbol);
+    return { orderBook };
   });
 }

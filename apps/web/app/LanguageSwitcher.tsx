@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { THEME } from "../lib/theme";
 import { useLocale } from "./LocaleProvider";
 
 export default function LanguageSwitcher() {
@@ -11,7 +12,7 @@ export default function LanguageSwitcher() {
       <button type="button" onClick={() => setLocale("es")} style={buttonStyle(locale === "es")}>
         ES
       </button>
-      <span style={{ color: "#ccc" }}>·</span>
+      <span style={{ color: THEME.textMuted }}>·</span>
       <button type="button" onClick={() => setLocale("en")} style={buttonStyle(locale === "en")}>
         EN
       </button>
@@ -26,7 +27,7 @@ function buttonStyle(active: boolean): CSSProperties {
     padding: 0,
     cursor: "pointer",
     fontWeight: active ? 700 : 400,
-    color: active ? "#111" : "#888",
+    color: active ? THEME.accent : THEME.textMuted,
     textDecoration: active ? "underline" : "none",
   };
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { apiFetch } from "../lib/api-client";
 import { decisionLabel, regimeLabel, stanceLabel } from "../lib/i18n";
+import { THEME } from "../lib/theme";
 import { useLocale } from "./LocaleProvider";
 
 const SYMBOLS = ["BTC-USDT", "ETH-USDT"] as const;
@@ -55,14 +56,14 @@ export default function BrokerNarrativeCard() {
   }, []);
 
   return (
-    <section style={{ marginTop: "2rem" }}>
-      <h2>{t("narrative.heading")}</h2>
-      <p style={{ color: "#666", fontSize: "0.9rem" }}>{t("narrative.framing")}</p>
+    <section style={sectionStyle}>
+      <h2 style={headingStyle}>{t("narrative.heading")}</h2>
+      <p style={framingStyle}>{t("narrative.framing")}</p>
 
-      {status === "loading" && <p>{t("narrative.loading")}</p>}
-      {status === "error" && <p>{t("narrative.error")}</p>}
+      {status === "loading" && <p style={mutedStyle}>{t("narrative.loading")}</p>}
+      {status === "error" && <p style={mutedStyle}>{t("narrative.error")}</p>}
       {status === "loaded" && narratives?.length === 0 && (
-        <p style={{ color: "#666" }}>{t("narrative.empty")}</p>
+        <p style={mutedStyle}>{t("narrative.empty")}</p>
       )}
 
       {narratives?.map((item) => {
@@ -99,26 +100,34 @@ export default function BrokerNarrativeCard() {
   );
 }
 
+const sectionStyle: CSSProperties = { marginTop: 0 };
+
+const headingStyle: CSSProperties = { color: THEME.textPrimary, fontSize: "1.1rem", margin: "0 0 0.35rem" };
+
+const framingStyle: CSSProperties = { color: THEME.textSecondary, fontSize: "0.85rem" };
+
+const mutedStyle: CSSProperties = { color: THEME.textSecondary };
+
 const cardStyle: CSSProperties = {
-  border: "1px solid #ddd",
-  borderRadius: 4,
+  background: THEME.panelBg,
+  border: `1px solid ${THEME.border}`,
+  borderRadius: 6,
   padding: "1rem",
   marginBottom: "1rem",
-  maxWidth: 640,
 };
 
-const metaStyle: CSSProperties = { color: "#666", fontSize: "0.85rem" };
+const metaStyle: CSSProperties = { color: THEME.textSecondary, fontSize: "0.85rem" };
 
-const paragraphStyle: CSSProperties = { fontSize: "0.95rem", lineHeight: 1.5 };
+const paragraphStyle: CSSProperties = { fontSize: "0.95rem", lineHeight: 1.5, color: THEME.textPrimary };
 
 const disclaimerStyle: CSSProperties = {
   fontSize: "0.85rem",
   lineHeight: 1.5,
   fontStyle: "italic",
-  color: "#555",
-  borderTop: "1px solid #eee",
+  color: THEME.textMuted,
+  borderTop: `1px solid ${THEME.border}`,
   paddingTop: "0.5rem",
   marginTop: "0.75rem",
 };
 
-const timestampStyle: CSSProperties = { color: "#999", fontSize: "0.8rem" };
+const timestampStyle: CSSProperties = { color: THEME.textMuted, fontSize: "0.8rem" };

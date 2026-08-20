@@ -14,6 +14,16 @@ function fakePool(): QueryablePool {
       if (sql.includes("FROM market_ticks")) {
         return { rows: [{ symbol: "BTC-USDT", exchange: "binance", price: 65000, side: "buy", timestamp: "t" }] };
       }
+      if (sql.includes("FROM ohlcv")) {
+        return {
+          rows: [{ timestamp: "2026-08-19T00:00:00Z", open: 1, high: 2, low: 0.5, close: 1.5, volume: 10 }],
+        };
+      }
+      if (sql.includes("FROM orderbook_snapshots")) {
+        return {
+          rows: [{ bids: [[100, 1]], asks: [[101, 1]], sequence_id: 1, timestamp: "2026-08-19T00:00:00Z" }],
+        };
+      }
       return { rows: [] };
     },
   };
@@ -112,6 +122,69 @@ describe("GET /market/latest", () => {
     const app = buildApp({ market: { pool: fakePool(), pubsub: fakePubSub() } });
     const response = await app.inject({ method: "GET", url: "/market/latest" });
     expect(response.statusCode).toBe(404);
+    await app.close();
+  });
+});
+
+describe("GET /market/history", () => {
+  it("returns ascending bars for a valid symbol", async () => {
+    const app = buildApp({ market: { pool: fakePool(), pubsub: fakePubSub() }, auth: fakeAuthDeps() });
+    const response = await app.inject({
+      method: "GET",
+      url: "/market/history?symbol=BTC-USDT&interval=1m&limit=200",
+      headers: sessionCookieHeader,
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.symbol).toBe("BTC-USDT");
+    expect(body.interval).toBe("1m");
+    expect(body.bars).toHaveLength(1);
+    expect(body.bars[0].close).toBe(1.5);
+
+    await app.close();
+  });
+
+  it("falls back to the default symbol for an unknown one", async () => {
+    const app = buildApp({ market: { pool: fakePool(), pubsub: fakePubSub() }, auth: fakeAuthDeps() });
+    const response = await app.inject({
+      method: "GET",
+      url: "/market/history?symbol=DOGE-USDT",
+      headers: sessionCookieHeader,
+    });
+    expect(response.json().symbol).toBe("BTC-USDT");
+    await app.close();
+  });
+
+  it("rejects a request with no session cookie", async () => {
+    const app = buildApp({ market: { pool: fakePool(), pubsub: fakePubSub() }, auth: fakeAuthDeps() });
+    const response = await app.inject({ method: "GET", url: "/market/history?symbol=BTC-USDT" });
+    expect(response.statusCode).toBe(401);
+    await app.close();
+  });
+});
+
+describe("GET /market/orderbook", () => {
+  it("returns the latest snapshot for a valid symbol", async () => {
+    const app = buildApp({ market: { pool: fakePool(), pubsub: fakePubSub() }, auth: fakeAuthDeps() });
+    const response = await app.inject({
+      method: "GET",
+      url: "/market/orderbook?symbol=BTC-USDT",
+      headers: sessionCookieHeader,
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.orderBook.symbol).toBe("BTC-USDT");
+    expect(body.orderBook.bids).toEqual([[100, 1]]);
+
+    await app.close();
+  });
+
+  it("rejects a request with no session cookie", async () => {
+    const app = buildApp({ market: { pool: fakePool(), pubsub: fakePubSub() }, auth: fakeAuthDeps() });
+    const response = await app.inject({ method: "GET", url: "/market/orderbook?symbol=BTC-USDT" });
+    expect(response.statusCode).toBe(401);
     await app.close();
   });
 });

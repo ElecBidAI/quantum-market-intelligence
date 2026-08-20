@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { apiFetch, apiStreamUrl } from "../lib/api-client";
 import { statusLabel } from "../lib/i18n";
+import { THEME } from "../lib/theme";
 import {
   applyLatestSnapshot,
   applyOhlcvEvent,
@@ -17,7 +18,19 @@ const SYMBOLS = ["BTC-USDT", "ETH-USDT"] as const;
 
 type ConnectionStatus = "connecting" | "connected" | "error";
 
-export default function MarketDashboard() {
+/**
+ * Compact watchlist: real last price + live/stale status per symbol,
+ * clickable to switch PriceChart's active symbol. Was originally the
+ * dashboard's primary (table) price view; PriceChart now owns that role,
+ * so this shrank to a ticker strip — same fetch/SSE logic, smaller JSX.
+ */
+export default function MarketDashboard({
+  activeSymbol,
+  onSelectSymbol,
+}: {
+  activeSymbol: string;
+  onSelectSymbol: (symbol: string) => void;
+}) {
   const { locale, t } = useLocale();
   const [state, setState] = useState<MarketState>(() => initMarketState(SYMBOLS));
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
@@ -61,47 +74,68 @@ export default function MarketDashboard() {
   }, []);
 
   return (
-    <section style={{ marginTop: "2rem" }}>
-      <h2>{t("dashboard.heading")}</h2>
-      <p style={{ color: "#666", fontSize: "0.9rem" }}>
-        {t("dashboard.feedIntroPrefix")} {statusLabel(locale, status)}.{" "}
-        {t("dashboard.feedIntroSuffix")}
-      </p>
-      <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: 560 }}>
-        <thead>
-          <tr>
-            <th style={cellStyle}>{t("dashboard.colSymbol")}</th>
-            <th style={cellStyle}>{t("dashboard.colExchange")}</th>
-            <th style={cellStyle}>{t("dashboard.colPrice")}</th>
-            <th style={cellStyle}>{t("dashboard.colUpdate")}</th>
-            <th style={cellStyle}>{t("dashboard.colLive")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {SYMBOLS.map((symbol) => {
-            const row = state[symbol];
-            const live = isLive(row?.lastUpdate ?? null, now);
-            return (
-              <tr key={symbol}>
-                <td style={cellStyle}>{symbol}</td>
-                <td style={cellStyle}>{row?.exchange ?? "—"}</td>
-                <td style={cellStyle}>{row?.lastPrice ?? "—"}</td>
-                <td style={cellStyle}>{row?.lastUpdate ?? "—"}</td>
-                <td style={{ ...cellStyle, color: live ? "#0a7d32" : "#999" }}>
-                  {live ? t("dashboard.live") : t("dashboard.stale")}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <section style={panelStyle}>
+      <div style={headerRowStyle}>
+        <h3 style={headingStyle}>{t("watchlist.heading")}</h3>
+        <span style={statusDotStyle(status)} title={statusLabel(locale, status)} />
+      </div>
+      {SYMBOLS.map((symbol) => {
+        const row = state[symbol];
+        const live = isLive(row?.lastUpdate ?? null, now);
+        const active = symbol === activeSymbol;
+        return (
+          <button
+            key={symbol}
+            type="button"
+            onClick={() => onSelectSymbol(symbol)}
+            style={rowStyle(active)}
+          >
+            <span style={{ color: THEME.textPrimary, fontWeight: 600 }}>{symbol}</span>
+            <span style={{ ...priceStyle, color: live ? THEME.textPrimary : THEME.textMuted }}>
+              {row?.lastPrice ?? "—"}
+            </span>
+          </button>
+        );
+      })}
     </section>
   );
 }
 
-const cellStyle: CSSProperties = {
-  border: "1px solid #ddd",
-  padding: "0.4rem 0.6rem",
-  textAlign: "left",
-  fontVariantNumeric: "tabular-nums",
+const panelStyle: CSSProperties = {
+  background: THEME.panelBg,
+  border: `1px solid ${THEME.border}`,
+  borderRadius: 6,
+  padding: "0.75rem",
 };
+
+const headerRowStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginBottom: "0.5rem",
+};
+
+const headingStyle: CSSProperties = { margin: 0, fontSize: "0.9rem", color: THEME.textPrimary };
+
+function statusDotStyle(status: ConnectionStatus): CSSProperties {
+  const color = status === "connected" ? THEME.positive : status === "error" ? THEME.negative : THEME.textMuted;
+  return { width: 8, height: 8, borderRadius: "50%", background: color, display: "inline-block" };
+}
+
+function rowStyle(active: boolean): CSSProperties {
+  return {
+    display: "flex",
+    width: "100%",
+    justifyContent: "space-between",
+    alignItems: "center",
+    background: active ? THEME.panelBgAlt : "transparent",
+    border: "none",
+    borderRadius: 4,
+    padding: "0.4rem 0.5rem",
+    marginBottom: "0.2rem",
+    cursor: "pointer",
+    textAlign: "left",
+  };
+}
+
+const priceStyle: CSSProperties = { fontVariantNumeric: "tabular-nums", fontSize: "0.9rem" };

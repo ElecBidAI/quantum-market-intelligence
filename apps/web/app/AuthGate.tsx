@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../lib/api-client";
+import { THEME } from "../lib/theme";
 import { useLocale } from "./LocaleProvider";
 
 /**
@@ -36,7 +37,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }, [router]);
 
   if (!authenticated) {
-    return <p style={{ color: "#666" }}>{t("authGate.checking")}</p>;
+    return <p style={{ color: THEME.textSecondary }}>{t("authGate.checking")}</p>;
   }
   return <>{children}</>;
 }

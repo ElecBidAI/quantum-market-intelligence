@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { apiFetch } from "../lib/api-client";
+import { THEME } from "../lib/theme";
 import { useLocale } from "./LocaleProvider";
 
 const SYMBOLS = ["BTC-USDT", "ETH-USDT"] as const;
@@ -54,21 +55,21 @@ export default function DerivativesCard() {
   const hasAnyData = derivatives?.some((d) => d.fundingRate || d.basis) ?? false;
 
   return (
-    <section style={{ marginTop: "2rem" }}>
-      <h2>{t("derivatives.heading")}</h2>
-      <p style={{ color: "#666", fontSize: "0.9rem" }}>{t("derivatives.framing")}</p>
+    <section>
+      <h2 style={headingStyle}>{t("derivatives.heading")}</h2>
+      <p style={framingStyle}>{t("derivatives.framing")}</p>
 
-      {status === "loading" && <p>{t("derivatives.loading")}</p>}
-      {status === "error" && <p>{t("derivatives.error")}</p>}
-      {status === "loaded" && !hasAnyData && <p style={{ color: "#666" }}>{t("derivatives.empty")}</p>}
+      {status === "loading" && <p style={mutedStyle}>{t("derivatives.loading")}</p>}
+      {status === "error" && <p style={mutedStyle}>{t("derivatives.error")}</p>}
+      {status === "loaded" && !hasAnyData && <p style={mutedStyle}>{t("derivatives.empty")}</p>}
 
       {status === "loaded" && hasAnyData && (
-        <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: 560 }}>
+        <table style={{ borderCollapse: "collapse", width: "100%" }}>
           <thead>
             <tr>
-              <th style={cellStyle}>{t("dashboard.colSymbol")}</th>
-              <th style={cellStyle}>{t("derivatives.fundingRateLabel")}</th>
-              <th style={cellStyle}>{t("derivatives.basisLabel")}</th>
+              <th style={headerCellStyle}>{t("dashboard.colSymbol")}</th>
+              <th style={headerCellStyle}>{t("derivatives.fundingRateLabel")}</th>
+              <th style={headerCellStyle}>{t("derivatives.basisLabel")}</th>
             </tr>
           </thead>
           <tbody>
@@ -94,9 +95,25 @@ export default function DerivativesCard() {
   );
 }
 
-const cellStyle: CSSProperties = {
-  border: "1px solid #ddd",
+const headingStyle: CSSProperties = { color: THEME.textPrimary, fontSize: "1.1rem", margin: "0 0 0.35rem" };
+
+const framingStyle: CSSProperties = { color: THEME.textSecondary, fontSize: "0.85rem" };
+
+const mutedStyle: CSSProperties = { color: THEME.textSecondary };
+
+const headerCellStyle: CSSProperties = {
+  borderBottom: `1px solid ${THEME.border}`,
   padding: "0.4rem 0.6rem",
   textAlign: "left",
+  color: THEME.textMuted,
+  fontWeight: 400,
+  fontSize: "0.85rem",
+};
+
+const cellStyle: CSSProperties = {
+  borderBottom: `1px solid ${THEME.border}`,
+  padding: "0.4rem 0.6rem",
+  textAlign: "left",
+  color: THEME.textPrimary,
   fontVariantNumeric: "tabular-nums",
 };

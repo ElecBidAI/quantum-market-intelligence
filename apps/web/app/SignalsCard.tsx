@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { apiFetch } from "../lib/api-client";
 import { decisionLabel, directionLabel, regimeLabel } from "../lib/i18n";
+import { THEME } from "../lib/theme";
 import { useLocale } from "./LocaleProvider";
 
 const SYMBOLS = ["BTC-USDT", "ETH-USDT"] as const;
@@ -73,14 +74,14 @@ export default function SignalsCard() {
   }, []);
 
   return (
-    <section style={{ marginTop: "2rem" }}>
-      <h2>{t("signals.heading")}</h2>
-      <p style={{ color: "#666", fontSize: "0.9rem" }}>{t("signals.framing")}</p>
+    <section>
+      <h2 style={headingStyle}>{t("signals.heading")}</h2>
+      <p style={framingStyle}>{t("signals.framing")}</p>
 
-      {status === "loading" && <p>{t("signals.loading")}</p>}
-      {status === "error" && <p>{t("signals.error")}</p>}
+      {status === "loading" && <p style={mutedStyle}>{t("signals.loading")}</p>}
+      {status === "error" && <p style={mutedStyle}>{t("signals.error")}</p>}
       {status === "loaded" && signals?.length === 0 && (
-        <p style={{ color: "#666" }}>{t("signals.empty")}</p>
+        <p style={mutedStyle}>{t("signals.empty")}</p>
       )}
 
       {signals?.map((item) => {
@@ -154,16 +155,26 @@ export default function SignalsCard() {
   );
 }
 
+const headingStyle: CSSProperties = { color: THEME.textPrimary, fontSize: "1.1rem", margin: "0 0 0.35rem" };
+
+const framingStyle: CSSProperties = { color: THEME.textSecondary, fontSize: "0.85rem" };
+
+const mutedStyle: CSSProperties = { color: THEME.textSecondary };
+
 const cardStyle: CSSProperties = {
-  border: "1px solid #ddd",
-  borderRadius: 4,
+  background: THEME.panelBg,
+  border: `1px solid ${THEME.border}`,
+  borderRadius: 6,
   padding: "1rem",
   marginBottom: "1rem",
-  maxWidth: 640,
 };
 
-const metaStyle: CSSProperties = { color: "#666", fontSize: "0.85rem" };
+const metaStyle: CSSProperties = { color: THEME.textSecondary, fontSize: "0.85rem" };
 
-const cellStyle: CSSProperties = { padding: "0.15rem 0.5rem 0.15rem 0", textAlign: "left" };
+const cellStyle: CSSProperties = {
+  padding: "0.15rem 0.5rem 0.15rem 0",
+  textAlign: "left",
+  color: THEME.textPrimary,
+};
 
-const labelCellStyle: CSSProperties = { ...cellStyle, color: "#666" };
+const labelCellStyle: CSSProperties = { ...cellStyle, color: THEME.textMuted };

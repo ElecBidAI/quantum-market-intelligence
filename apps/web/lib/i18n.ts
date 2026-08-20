@@ -111,6 +111,22 @@ const STRINGS = {
     "paperTrading.avgEntryLabel": "Avg. entry",
     "paperTrading.recentOrdersHeading": "Recent orders",
     "paperTrading.noOrders": "No paper orders yet.",
+
+    "chart.entryLine": "Entry",
+    "chart.stopLine": "Stop",
+    "chart.targetLine": "Target",
+    "chart.symbolLabel": "Symbol",
+    "chart.intervalLabel": "1m",
+
+    "orderbook.heading": "Order book",
+    "orderbook.loading": "Loading…",
+    "orderbook.error": "Could not load the order book right now.",
+    "orderbook.empty": "No order book data has been ingested yet for this symbol.",
+    "orderbook.spreadLabel": "Spread",
+    "orderbook.priceCol": "Price",
+    "orderbook.sizeCol": "Size",
+
+    "watchlist.heading": "Watchlist",
   },
   es: {
     "page.description":
@@ -216,6 +232,22 @@ const STRINGS = {
     "paperTrading.avgEntryLabel": "Entrada prom.",
     "paperTrading.recentOrdersHeading": "Órdenes recientes",
     "paperTrading.noOrders": "Aún no hay órdenes simuladas.",
+
+    "chart.entryLine": "Entrada",
+    "chart.stopLine": "Stop",
+    "chart.targetLine": "Objetivo",
+    "chart.symbolLabel": "Símbolo",
+    "chart.intervalLabel": "1m",
+
+    "orderbook.heading": "Libro de órdenes",
+    "orderbook.loading": "Cargando…",
+    "orderbook.error": "No se pudo cargar el libro de órdenes en este momento.",
+    "orderbook.empty": "Aún no se han ingerido datos del libro de órdenes para este símbolo.",
+    "orderbook.spreadLabel": "Spread",
+    "orderbook.priceCol": "Precio",
+    "orderbook.sizeCol": "Tamaño",
+
+    "watchlist.heading": "Lista de seguimiento",
   },
 } as const satisfies Record<Locale, Record<string, string>>;
 
