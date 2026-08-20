@@ -66,11 +66,16 @@ services:
     plan: free # spins down after ~15min idle; wakes on the next request in a few seconds
     # See qmi-api's buildCommand comment re: corepack.
     buildCommand: npx pnpm@11.13.1 install --frozen-lockfile && npx pnpm@11.13.1 run build:packages && npx pnpm@11.13.1 --filter @qmi/web run build
-    # Next.js's `next start` doesn't read Render's $PORT on its own; passed
-    # through explicitly. NEXT_PUBLIC_API_URL is inlined at *build* time
-    # (see next.config.mjs), so it must already be set above, not just at
-    # runtime.
-    startCommand: npx pnpm@11.13.1 --filter @qmi/web run start -- -p $PORT
+    # `next start` reads Render's $PORT natively (its -p/--port option
+    # defaults to env: PORT — confirmed in Next's own CLI docs), so no
+    # extra flag is needed. A previous `-- -p $PORT` here was actively
+    # wrong: pnpm forwards extra args to the underlying script without
+    # needing `--` at all (unlike npm), so pnpm passed the literal "--"
+    # straight to `next start`, which parsed it as the app directory
+    # argument and crashed with "Invalid project directory provided".
+    # NEXT_PUBLIC_API_URL is inlined at *build* time (see next.config.mjs),
+    # so it must already be set above, not just at runtime.
+    startCommand: npx pnpm@11.13.1 --filter @qmi/web run start
     envVars:
       - key: NODE_ENV
         value: production
