@@ -25,8 +25,11 @@ services:
     name: qmi-api
     runtime: node
     plan: free # spins down after ~15min idle; wakes on the next request in a few seconds
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build:packages && pnpm --filter @qmi/api run build
-    startCommand: pnpm --filter @qmi/api run start
+    # `corepack enable` fails here (Render's build image has a read-only
+    # /usr/bin, and corepack needs to write its pnpm shim there) — npx runs
+    # pnpm from its own writable cache instead, sidestepping that entirely.
+    buildCommand: npx pnpm@11.13.1 install --frozen-lockfile && npx pnpm@11.13.1 run build:packages && npx pnpm@11.13.1 --filter @qmi/api run build
+    startCommand: npx pnpm@11.13.1 --filter @qmi/api run start
     envVars:
       - key: NODE_ENV
         value: production
@@ -61,12 +64,13 @@ services:
     name: qmi-web
     runtime: node
     plan: free # spins down after ~15min idle; wakes on the next request in a few seconds
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build:packages && pnpm --filter @qmi/web run build
+    # See qmi-api's buildCommand comment re: corepack.
+    buildCommand: npx pnpm@11.13.1 install --frozen-lockfile && npx pnpm@11.13.1 run build:packages && npx pnpm@11.13.1 --filter @qmi/web run build
     # Next.js's `next start` doesn't read Render's $PORT on its own; passed
     # through explicitly. NEXT_PUBLIC_API_URL is inlined at *build* time
     # (see next.config.mjs), so it must already be set above, not just at
     # runtime.
-    startCommand: pnpm --filter @qmi/web run start -- -p $PORT
+    startCommand: npx pnpm@11.13.1 --filter @qmi/web run start -- -p $PORT
     envVars:
       - key: NODE_ENV
         value: production
@@ -101,8 +105,8 @@ services:
   #   name: qmi-market-data
   #   runtime: node
   #   plan: starter
-  #   buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build:packages && pnpm --filter @qmi/market-data run build
-  #   startCommand: pnpm --filter @qmi/market-data run start
+  #   buildCommand: npx pnpm@11.13.1 install --frozen-lockfile && npx pnpm@11.13.1 run build:packages && npx pnpm@11.13.1 --filter @qmi/market-data run build
+  #   startCommand: npx pnpm@11.13.1 --filter @qmi/market-data run start
   #   envVars:
   #     - key: NODE_ENV
   #       value: production
